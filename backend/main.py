@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from modules.dashboard.http.dashboard_router import router as dashboard_router
+from modules.procesos.http.procesos_router import router as procesos_router
 from modules.procesos.infrastructure.excel_reader import ExcelStore
 
 load_dotenv()
@@ -28,6 +30,10 @@ app.add_middleware(
     allow_methods=["GET"],
     allow_headers=["*"],
 )
+
+
+app.include_router(procesos_router)
+app.include_router(dashboard_router)
 
 
 @app.get("/health")
