@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 import os
 import re
@@ -8,6 +9,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+MODULOS_ESPERADOS = ["M1", "M2", "M3"]
 
 COLUMNAS = [
     "codigo_proceso",
@@ -91,19 +94,32 @@ def _int_o_none(valor) -> int | None:
 
 
 class ExcelStore:
-    """Almacén en memoria de todos los registros leídos desde Excel al iniciar."""
+    """Almacén en memoria de los registros del Excel, con recarga en caliente."""
 
     _registros: list[dict] = []
+    _ruta: str | None = None
+    _mtime: float | None = None
+    _version: int = 0
+    _ultima_carga: str | None = None
+    _advertencias: list[str] = []
 
     @classmethod
     def cargar(cls, excel_path: str) -> None:
+        cls._ruta = excel_path
+        advertencias: list[str] = []
+
         if not os.path.exists(excel_path):
             logger.warning(f"Archivo Excel no encontrado: {excel_path}")
+            cls._mtime = None
+            cls._aplicar([], [f"Archivo Excel no encontrado: {os.path.basename(excel_path)}"])
             return
+
+        mtime = os.path.getmtime(excel_path)
 
         try:
             xl = pd.ExcelFile(excel_path)
         except Exception as e:
+            # Se conservan los datos anteriores si el archivo está bloqueado o corrupto
             logger.error(f"No se pudo abrir {excel_path}: {e}")
             return
 
@@ -117,9 +133,51 @@ class ExcelStore:
                 logger.info(f"  [{hoja}] → {modulo}: {len(filas)} registros")
             except Exception as e:
                 logger.warning(f"  Error en hoja '{hoja}': {e}")
+                advertencias.append(f"No se pudo leer la hoja '{hoja}' del Excel")
 
+        modulos_presentes = {r["modulo"] for r in registros}
+        for esperado in MODULOS_ESPERADOS:
+            if esperado not in modulos_presentes:
+                advertencias.append(f"El módulo {esperado} no tiene datos en el Excel")
+
+        cls._mtime = mtime
+        cls._aplicar(registros, advertencias)
+        logger.info(f"ExcelStore listo: {len(registros)} registros en total (versión {cls._version})")
+
+    @classmethod
+    def _aplicar(cls, registros: list[dict], advertencias: list[str]) -> None:
         cls._registros = registros
-        logger.info(f"ExcelStore listo: {len(registros)} registros en total")
+        cls._advertencias = advertencias
+        cls._version += 1
+        cls._ultima_carga = datetime.now().astimezone().isoformat()
+
+    @classmethod
+    def recargar_si_cambio(cls) -> bool:
+        """Recarga el Excel si su mtime cambió desde la última carga. Devuelve True si recargó."""
+        if not cls._ruta:
+            return False
+
+        try:
+            mtime_actual = os.path.getmtime(cls._ruta)
+        except OSError:
+            mtime_actual = None
+
+        if mtime_actual == cls._mtime:
+            return False
+
+        logger.info("Cambio detectado en el Excel, recargando…")
+        cls.cargar(cls._ruta)
+        return True
+
+    @classmethod
+    def get_meta(cls) -> dict:
+        return {
+            "version": cls._version,
+            "ultima_carga": cls._ultima_carga,
+            "total_registros": len(cls._registros),
+            "modulos_cargados": sorted({r["modulo"] for r in cls._registros}),
+            "advertencias": cls._advertencias,
+        }
 
     @classmethod
     def get_all(cls) -> list[dict]:

@@ -54,10 +54,11 @@ class DashboardService:
         amarillos = sum(1 for p in resumen_procesos if p["semaforo"] == "Amarillo")
         rojos = sum(1 for p in resumen_procesos if p["semaforo"] == "Rojo")
 
+        # Sin datos no hay crítico; el frontend lo trata como opcional
         critico = min(
             resumen_procesos,
             key=lambda p: p["promedio_avance_t1"] if p["promedio_avance_t1"] is not None else 100,
-        )
+        ) if resumen_procesos else None
 
         return {
             "total_procesos": total,
