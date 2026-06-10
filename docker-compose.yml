@@ -1,0 +1,28 @@
+# Dashboard CEPLAN — docker compose up --build
+# Frontend: http://localhost:8080 | API: proxy interno via nginx
+services:
+  backend:
+    build: ./backend
+    environment:
+      EXCEL_PATH: /data/datos_estandarizados.xlsx
+      ALLOWED_ORIGINS: http://localhost:8080
+    # Se monta el directorio (no el archivo) para que la recarga en caliente
+    # detecte el reemplazo de inode que hace Excel al guardar
+    volumes:
+      - ./:/data:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ""
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
