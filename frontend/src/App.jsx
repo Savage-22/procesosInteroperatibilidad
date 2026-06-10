@@ -1,6 +1,10 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 
+import ErrorBoundary from './shared/components/ErrorBoundary'
 import Navbar from './shared/components/Navbar'
+import BannerAdvertencias from './shared/components/BannerAdvertencias'
+import NotFoundPage from './shared/components/NotFoundPage'
+import { DatosProvider } from './shared/context/DatosContext'
 import DashboardPage from './domains/dashboard/pages/DashboardPage'
 import ProcesoDetallePage from './domains/procesos/pages/ProcesoDetallePage'
 import ComparativaPage from './domains/comparativa/pages/ComparativaPage'
@@ -8,18 +12,24 @@ import ParetoPage from './domains/pareto/pages/ParetoPage'
 
 export default function App() {
     return (
-        <BrowserRouter>
-            <div className="min-h-screen bg-[#f2f4f7]">
-                <Navbar />
-                <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <Routes>
-                        <Route path="/" element={<DashboardPage />} />
-                        <Route path="/proceso/:codigo" element={<ProcesoDetallePage />} />
-                        <Route path="/comparativa" element={<ComparativaPage />} />
-                        <Route path="/pareto" element={<ParetoPage />} />
-                    </Routes>
-                </main>
-            </div>
-        </BrowserRouter>
+        <ErrorBoundary>
+            <DatosProvider>
+                <BrowserRouter>
+                    <div className="min-h-screen bg-[#f2f4f7]">
+                        <Navbar />
+                        <BannerAdvertencias />
+                        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                            <Routes>
+                                <Route path="/" element={<DashboardPage />} />
+                                <Route path="/proceso/:codigo" element={<ProcesoDetallePage />} />
+                                <Route path="/comparativa" element={<ComparativaPage />} />
+                                <Route path="/pareto" element={<ParetoPage />} />
+                                <Route path="*" element={<NotFoundPage />} />
+                            </Routes>
+                        </main>
+                    </div>
+                </BrowserRouter>
+            </DatosProvider>
+        </ErrorBoundary>
     )
 }
