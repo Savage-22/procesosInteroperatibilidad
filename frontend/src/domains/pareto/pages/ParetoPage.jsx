@@ -60,7 +60,7 @@ export default function ParetoPage() {
             <div>
                 <h1 className="text-2xl font-bold text-[#1e3654]">Análisis Pareto</h1>
                 <p className="text-sm text-gray-500 mt-1">
-                    Identificación del 20% de procesos que concentran el 80% de la brecha total
+                    Procesos que concentran el 80% de la brecha de avance T1 (puntos que faltan para el 100%)
                 </p>
             </div>
 
@@ -71,7 +71,7 @@ export default function ParetoPage() {
                     <p className="text-2xl font-bold text-[#9c1d1d]">{umbral_80 + 1} de {items.length}</p>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">Mayor brecha</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Mayor brecha de avance</p>
                     <p className="text-2xl font-bold text-[#1e3654]">{items[0]?.brecha_pareto?.toFixed(1)} pp</p>
                     <p className="text-xs text-gray-400">{items[0]?.codigo}</p>
                 </div>
@@ -100,7 +100,7 @@ export default function ParetoPage() {
                     <table className="w-full text-sm">
                         <thead className="bg-[#f2f4f7] text-gray-600 text-xs uppercase tracking-wide">
                             <tr>
-                                {['#', 'Código', 'Proceso', 'Módulo', 'Brecha (pp)', 'Avance T1', '% Acumulado', 'Semáforo'].map((h) => (
+                                {['#', 'Código', 'Proceso', 'Módulo', 'Brecha avance (pp)', 'Avance T1', '% Acumulado', 'Semáforo'].map((h) => (
                                     <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
                                 ))}
                             </tr>

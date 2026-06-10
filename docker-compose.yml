@@ -7,9 +7,10 @@ services:
       EXCEL_PATH: /data/datos_estandarizados.xlsx
       ALLOWED_ORIGINS: http://localhost:8080
     # Se monta el directorio (no el archivo) para que la recarga en caliente
-    # detecte el reemplazo de inode que hace Excel al guardar
+    # detecte el reemplazo de inode que hace Excel al guardar; con escritura
+    # porque POST /api/upload reemplaza el archivo
     volumes:
-      - ./:/data:ro
+      - ./:/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s

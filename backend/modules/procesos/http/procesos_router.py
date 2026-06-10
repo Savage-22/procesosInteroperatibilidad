@@ -1,4 +1,7 @@
-from fastapi import APIRouter, HTTPException, Query
+import io
+
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+import pandas as pd
 
 from modules.procesos.application.proceso_service import ProcesoService
 from modules.procesos.infrastructure.excel_reader import ExcelStore
@@ -93,6 +96,37 @@ def detalle_proceso(codigo: str):
             "meses": meses,
         },
     }
+
+
+# ------------------------------------------------------------------ #
+# Issue #37 — POST /api/upload                                        #
+# ------------------------------------------------------------------ #
+
+@router.post("/upload")
+async def subir_excel(archivo: UploadFile = File(...)):
+    if not archivo.filename or not archivo.filename.lower().endswith((".xlsx", ".xlsm")):
+        raise HTTPException(status_code=400, detail="El archivo debe ser un Excel (.xlsx)")
+
+    contenido = await archivo.read()
+
+    # Se valida antes de escribir para no pisar el archivo bueno con uno corrupto
+    try:
+        pd.ExcelFile(io.BytesIO(contenido))
+    except Exception:
+        raise HTTPException(status_code=400, detail="El archivo no es un Excel legible")
+
+    ruta = ExcelStore.get_ruta()
+    if not ruta:
+        raise HTTPException(status_code=500, detail="El servidor no tiene configurada la ruta del Excel")
+
+    try:
+        with open(ruta, "wb") as f:
+            f.write(contenido)
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=f"No se pudo guardar el archivo: {e}")
+
+    ExcelStore.cargar(ruta)
+    return {"success": True, "data": ExcelStore.get_meta()}
 
 
 # ------------------------------------------------------------------ #

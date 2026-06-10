@@ -10,7 +10,12 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-MODULOS_ESPERADOS = ["M1", "M2", "M3"]
+# Configurable porque los módulos del proyecto pueden crecer (ej. agregar M4)
+MODULOS_ESPERADOS = [
+    m.strip().upper()
+    for m in os.getenv("MODULOS_ESPERADOS", "M1,M2,M3,M4").split(",")
+    if m.strip()
+]
 
 COLUMNAS = [
     "codigo_proceso",
@@ -168,6 +173,10 @@ class ExcelStore:
         logger.info("Cambio detectado en el Excel, recargando…")
         cls.cargar(cls._ruta)
         return True
+
+    @classmethod
+    def get_ruta(cls) -> str | None:
+        return cls._ruta
 
     @classmethod
     def get_meta(cls) -> dict:

@@ -7,8 +7,9 @@ Aplicación web para el seguimiento y evaluación de procesos según la **Direct
 - **Dashboard** (`/`) — KPIs globales, distribución de semáforo por proceso y tabla resumen ordenable
 - **Detalle de proceso** (`/proceso/:codigo`) — resultado obtenido vs esperado, avance T1 mensual con umbrales 95/75 y tabla de datos
 - **Comparativa** (`/comparativa`) — líneas superpuestas de avance T1 con selector múltiple por módulo y leyenda interactiva
-- **Pareto** (`/pareto`) — ranking de criticidad: el 20% de procesos que concentra el 80% de la brecha
+- **Pareto** (`/pareto`) — ranking de criticidad por *brecha de avance* (100 − avance T1 promedio): identifica los procesos que concentran el 80% del incumplimiento respecto a lo esperado **a la fecha**, alineado con el semáforo
 - **Recarga en caliente** — al editar y guardar el Excel, el backend recarga los datos y el frontend se refresca solo (sin reiniciar nada)
+- **Carga desde la interfaz** — botón "Cargar Excel" en el navbar que sube un nuevo archivo de datos (`POST /api/upload`) y refresca todas las vistas al instante
 
 ### Semáforo CEPLAN
 
@@ -98,6 +99,7 @@ npm run dev
 | `EXCEL_PATH` (backend) | `../datos_estandarizados.xlsx` | Ruta del Excel de datos |
 | `ALLOWED_ORIGINS` (backend) | `http://localhost:5173` | Orígenes CORS, separados por coma |
 | `EXCEL_WATCH_INTERVAL` (backend) | `5` | Segundos entre chequeos de cambios del Excel |
+| `MODULOS_ESPERADOS` (backend) | `M1,M2,M3,M4` | Módulos cuya ausencia genera advertencia en la interfaz |
 | `VITE_API_URL` (frontend) | `http://localhost:8000` | URL del backend (vacío = mismo origen, usado en Docker) |
 
 ## API
@@ -110,6 +112,7 @@ npm run dev
 | GET | `/api/comparativa?codigos=M1.1,M2.2` | Avance T1 por proceso y mes (filtro opcional) |
 | GET | `/api/pareto` | Ranking Pareto con % acumulado y umbral 80 |
 | GET | `/api/meta` | Versión de datos, última carga, módulos y advertencias |
+| POST | `/api/upload` | Sube un nuevo Excel de datos (multipart, campo `archivo`) |
 | GET | `/health` | Estado del servidor |
 
 Formato de respuesta: `{ "success": true, "data": … }`.
@@ -123,6 +126,8 @@ Un archivo `datos_estandarizados.xlsx` con **una hoja por módulo** (M1, M2, M3)
 - Una meta con `≤` se interpreta como indicador descendente (menor es mejor)
 
 Si falta una hoja o el archivo, el servidor arranca igual con los datos disponibles y la interfaz muestra una advertencia no bloqueante.
+
+> 💡 En `propuesta_formato_excel.xlsx` hay una **propuesta de formato mejorado** (solo datos crudos, tipo de indicador explícito, mes con lista desplegable, fuente de evidencia y hoja M4) para debatir en equipo antes de migrar.
 
 ## Tests
 

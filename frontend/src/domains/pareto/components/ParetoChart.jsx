@@ -29,7 +29,7 @@ export default function ParetoChart({ items, umbral80 }) {
                 <Legend />
                 <ReferenceLine yAxisId="right" y={80} stroke="#9c1d1d" strokeDasharray="4 2"
                     label={{ value: '80%', position: 'insideTopRight', fontSize: 10, fill: '#9c1d1d' }} />
-                <Bar yAxisId="left" dataKey="brecha_pareto" name="Brecha (pp)" radius={[4, 4, 0, 0]}>
+                <Bar yAxisId="left" dataKey="brecha_pareto" name="Brecha de avance (pp)" radius={[4, 4, 0, 0]}>
                     {items.map((item, i) => (
                         <Cell
                             key={item.codigo}

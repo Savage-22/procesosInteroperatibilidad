@@ -119,12 +119,31 @@ def test_pareto_acumulado_llega_a_100():
 
 
 def test_pareto_descendente_brecha_positiva_si_excede_meta():
-    # Indicador "menor es mejor" con meta 20: obtenido 35 → brecha 15
+    # Indicador "menor es mejor": obtenido 35 vs esperado 20 → avance 57.14 → brecha 42.86
     registros = [
         {**_registro("Enero", 35, 20, meta_final=20, es_descendente=True), "codigo_proceso": "M2.2"},
     ]
     items = ProcesoService.calcular_pareto(registros)
-    assert items[0]["brecha_pareto"] == 15.0
+    assert items[0]["brecha_pareto"] == 42.86
+
+
+def test_pareto_adelantado_al_plan_sin_brecha():
+    # Obtenido 77 supera lo esperado a la fecha (75) aunque la meta anual sea 90:
+    # el proceso va adelantado y no debe aparecer como crítico
+    registros = [
+        {**_registro("Mayo", 77, 75, meta_final=90), "codigo_proceso": "M1.1"},
+    ]
+    items = ProcesoService.calcular_pareto(registros)
+    assert items[0]["brecha_pareto"] == 0.0
+
+
+def test_pareto_sin_datos_brecha_cero():
+    registros = [
+        {**_registro("Enero", None, None), "codigo_proceso": "M1.9"},
+    ]
+    items = ProcesoService.calcular_pareto(registros)
+    assert items[0]["brecha_pareto"] == 0.0
+    assert items[0]["semaforo"] == "Sin datos"
 
 
 def test_pareto_descendente_sin_brecha_si_cumple():

@@ -98,9 +98,11 @@ class ProcesoService:
     @staticmethod
     def calcular_pareto(todos_registros: list[dict]) -> list[dict]:
         """
-        Genera el ranking Pareto. La brecha_pareto se ajusta por tipo
-        de indicador para que siempre represente 'cuánto falta para
-        cumplir la meta' sin importar si es ascendente o descendente.
+        Genera el ranking Pareto. La brecha_pareto son los puntos de
+        avance T1 que faltan para el 100% (100 − promedio). Se mide
+        contra lo esperado a la fecha y no contra la meta de fin de
+        año, para no castigar a procesos con menos meses reportados,
+        y queda alineada con el semáforo del dashboard.
         """
         por_codigo: dict[str, list[dict]] = {}
         for r in todos_registros:
@@ -111,24 +113,13 @@ class ProcesoService:
             meta = registros[0]
             promedios = ProcesoService.calcular_promedios(registros)
             brecha_display = ProcesoService.calcular_brecha(registros)
-            es_descendente = registros[0].get("es_descendente", False)
-
-            # Brecha usada para ordenar Pareto: siempre positiva si hay problema
-            ultimo = ordenar_por_mes(registros)[-1]
-            obtenido_ultimo = ultimo.get("resultado_obtenido")
-            meta_final = ultimo.get("meta_final")
-
-            if obtenido_ultimo is not None and meta_final is not None:
-                if es_descendente:
-                    # Problema cuando obtenido supera la meta
-                    brecha_pareto = max(obtenido_ultimo - meta_final, 0.0)
-                else:
-                    # Problema cuando obtenido no llega a la meta
-                    brecha_pareto = max(meta_final - obtenido_ultimo, 0.0)
-            else:
-                brecha_pareto = 0.0
 
             avance_promedio = promedios["promedio_avance_t1"]
+
+            if avance_promedio is not None:
+                brecha_pareto = max(100.0 - avance_promedio, 0.0)
+            else:
+                brecha_pareto = 0.0
 
             items.append({
                 "codigo": codigo,
