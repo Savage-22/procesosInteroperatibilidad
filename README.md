@@ -119,11 +119,16 @@ Formato de respuesta: `{ "success": true, "data": … }`.
 
 ## Formato del Excel
 
-Un archivo `datos_estandarizados.xlsx` con **una hoja por módulo** (M1, M2, M3). En cada hoja:
+Un archivo `datos_estandarizados.xlsx` con **una hoja por equipo/módulo** (el nombre de la hoja es libre, ej. `P1 - Canteño`). En cada hoja:
 
-- La celda `A1` identifica el módulo (debe contener `M1`, `M2` o `M3`)
-- Los datos comienzan en la fila 4, con columnas: código (`M1.1`…), proceso, indicador, meta (texto), meta final, año, mes, numerador, denominador, resultado esperado, resultado obtenido, diferencia, avance T1, semáforo
-- Una meta con `≤` se interpreta como indicador descendente (menor es mejor)
+- La fila de encabezados se detecta automáticamente en las primeras filas; las columnas se reconocen por nombre y toleran variantes (`Sentido Indicador` / `Tipo Indicador`, `META FINAL` / `META FINAL (%)`)
+- Columnas: código de proceso (`M1.1`…), proceso, indicador, sentido (Ascendente/Descendente), unidad, meta final, año, mes, numerador, denominador y resultado esperado
+- El **módulo se deriva del código** (`M4.1` → módulo M4); no hace falta declararlo en la hoja
+- El backend usa **solo los datos crudos** y calcula el resto en Python para evitar errores de fórmulas:
+  - resultado obtenido = numerador ÷ denominador (×100 si la unidad es `%`; promedio si es `días` u otra unidad)
+  - diferencia, avance T1 y semáforo CEPLAN
+  - las columnas ya calculadas del Excel (obtenido, diferencia, avance, semáforo) se ignoran — la de obtenido solo sirve de respaldo cuando una fila no tiene numerador/denominador
+- Las filas que no son datos (notas, tablas auxiliares de fórmulas) se descartan automáticamente
 
 Si falta una hoja o el archivo, el servidor arranca igual con los datos disponibles y la interfaz muestra una advertencia no bloqueante.
 

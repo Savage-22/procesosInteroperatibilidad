@@ -2,93 +2,48 @@ from datetime import datetime
 import logging
 import os
 import re
+import unicodedata
 
 import pandas as pd
 from dotenv import load_dotenv
+
+from shared.meses import ORDEN_MESES
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Configurable porque los módulos del proyecto pueden crecer (ej. agregar M4)
+# Configurable porque los módulos del proyecto pueden crecer (ej. agregar M5)
 MODULOS_ESPERADOS = [
     m.strip().upper()
     for m in os.getenv("MODULOS_ESPERADOS", "M1,M2,M3,M4").split(",")
     if m.strip()
 ]
 
-COLUMNAS = [
-    "codigo_proceso",
-    "proceso",
-    "indicador",
-    "meta_texto",
-    "meta_final",
-    "anio",
-    "mes",
-    "numerador",
-    "denominador",
-    "resultado_esperado",
-    "resultado_obtenido",
-    "diferencia",
-    "avance_t1",
-    "semaforo",
-]
-
 _PATRON_CODIGO = re.compile(r"^M\d+\.\d+$")
-_PATRON_MODULO = re.compile(r"M\d+")
+
+# Campos cuya ausencia impide tratar una fila como dato
+_CAMPOS_MINIMOS = {"codigo_proceso", "mes", "resultado_esperado"}
 
 
-def _extraer_modulo(valor_fila0: str) -> str:
-    match = _PATRON_MODULO.search(str(valor_fila0))
-    return match.group(0) if match else "?"
+def _normalizar(texto) -> str:
+    """Minúsculas, sin tildes y con espacios colapsados, para comparar encabezados."""
+    plano = unicodedata.normalize("NFKD", str(texto)).encode("ascii", "ignore").decode()
+    return " ".join(plano.lower().split())
 
 
-def _es_descendente(meta_texto: str) -> bool:
-    return "≤" in str(meta_texto) or "<=" in str(meta_texto)
-
-
-def _parsear_hoja(df_raw: pd.DataFrame, modulo: str) -> list[dict]:
-    registros = []
-
-    for i in range(3, len(df_raw)):
-        fila = df_raw.iloc[i]
-        codigo = str(fila.iloc[0]).strip()
-
-        # Detener al primer código que no sea Nivel 1 (ej: M1.1, M2.3)
-        if not _PATRON_CODIGO.match(codigo):
-            break
-
-        try:
-            registro = {
-                "codigo_proceso": codigo,
-                "proceso": str(fila.iloc[1]).strip(),
-                "indicador": str(fila.iloc[2]).strip() if pd.notna(fila.iloc[2]) else "",
-                "meta_texto": str(fila.iloc[3]).strip(),
-                "meta_final": _float_o_none(fila.iloc[4]),
-                "anio": _int_o_none(fila.iloc[5]),
-                "mes": str(fila.iloc[6]).strip(),
-                "numerador": _float_o_none(fila.iloc[7]),
-                "denominador": _float_o_none(fila.iloc[8]),
-                "resultado_esperado": _float_o_none(fila.iloc[9]),
-                "resultado_obtenido": _float_o_none(fila.iloc[10]),
-                "diferencia": _float_o_none(fila.iloc[11]),
-                "avance_t1": _float_o_none(fila.iloc[12]),
-                "semaforo": str(fila.iloc[13]).strip(),
-                "modulo": modulo,
-                "es_descendente": _es_descendente(str(fila.iloc[3])),
-            }
-            registros.append(registro)
-        except Exception as e:
-            logger.warning(f"Fila {i} ignorada en módulo {modulo}: {e}")
-
-    return registros
+def _str_o_vacio(valor) -> str:
+    if valor is None or pd.isna(valor):
+        return ""
+    return str(valor).strip()
 
 
 def _float_o_none(valor) -> float | None:
     try:
-        return float(valor)
+        resultado = float(valor)
     except (TypeError, ValueError):
         return None
+    return None if pd.isna(resultado) else resultado
 
 
 def _int_o_none(valor) -> int | None:
@@ -96,6 +51,133 @@ def _int_o_none(valor) -> int | None:
         return int(float(valor))
     except (TypeError, ValueError):
         return None
+
+
+def _mapear_columnas(fila) -> dict[str, int]:
+    """
+    Localiza cada campo por palabra clave del encabezado, porque los nombres
+    varían entre hojas ("Sentido Indicador" vs "Tipo Indicador",
+    "META FINAL" vs "META FINAL (%)").
+    """
+    indices: dict[str, int] = {}
+    for i in range(len(fila)):
+        h = _normalizar(_str_o_vacio(fila.iloc[i]))
+        if not h:
+            continue
+        if "codigo" in h:
+            indices.setdefault("codigo_proceso", i)
+        elif h == "proceso":
+            indices.setdefault("proceso", i)
+        elif h == "indicador":
+            indices.setdefault("indicador", i)
+        elif "sentido" in h or h.startswith("tipo"):
+            indices.setdefault("sentido", i)
+        elif "unidad" in h:
+            indices.setdefault("unidad", i)
+        elif h.startswith("meta"):
+            indices.setdefault("meta_final", i)
+        elif h.startswith("ano"):
+            indices.setdefault("anio", i)
+        elif h == "mes":
+            indices.setdefault("mes", i)
+        elif "numerador" in h:
+            indices.setdefault("numerador", i)
+        elif "denominador" in h:
+            indices.setdefault("denominador", i)
+        elif "esperado" in h:
+            indices.setdefault("resultado_esperado", i)
+        elif "obtenido" in h:
+            indices.setdefault("resultado_obtenido", i)
+    return indices
+
+
+def _buscar_encabezado(df_raw: pd.DataFrame) -> tuple[int, dict[str, int]] | None:
+    """Busca la fila de encabezados en las primeras filas de la hoja."""
+    for i in range(min(10, len(df_raw))):
+        indices = _mapear_columnas(df_raw.iloc[i])
+        if _CAMPOS_MINIMOS <= indices.keys():
+            return i, indices
+    return None
+
+
+def _meta_texto(meta_final: float | None, unidad: str, es_descendente: bool) -> str:
+    if meta_final is None:
+        return ""
+    simbolo = "≤" if es_descendente else "≥"
+    return f"{simbolo} {meta_final:g} {unidad}".strip()
+
+
+def _parsear_hoja(df_raw: pd.DataFrame, hoja: str) -> tuple[list[dict], list[str]]:
+    """
+    Extrae los registros de una hoja. Solo se confía en los datos crudos del
+    Excel (numerador, denominador, esperado, meta); el resultado obtenido,
+    la diferencia, el avance T1 y el semáforo se calculan en el backend.
+    """
+    encontrado = _buscar_encabezado(df_raw)
+    if not encontrado:
+        return [], [f"La hoja '{hoja}' no tiene la fila de encabezados esperada"]
+
+    fila_encabezado, col = encontrado
+    registros: list[dict] = []
+
+    def valor(fila, campo):
+        i = col.get(campo)
+        return fila.iloc[i] if i is not None else None
+
+    for i in range(fila_encabezado + 1, len(df_raw)):
+        fila = df_raw.iloc[i]
+        codigo = _str_o_vacio(valor(fila, "codigo_proceso")).upper()
+        mes = _str_o_vacio(valor(fila, "mes")).capitalize()
+
+        # Solo filas de datos reales: descarta notas, tablas auxiliares y vacíos
+        if not _PATRON_CODIGO.match(codigo) or mes not in ORDEN_MESES:
+            continue
+
+        sentido = _str_o_vacio(valor(fila, "sentido"))
+        es_descendente = "descendente" in sentido.lower()
+        unidad = _str_o_vacio(valor(fila, "unidad"))
+
+        meta_final = _float_o_none(valor(fila, "meta_final"))
+        numerador = _float_o_none(valor(fila, "numerador"))
+        denominador = _float_o_none(valor(fila, "denominador"))
+        esperado = _float_o_none(valor(fila, "resultado_esperado"))
+
+        # El obtenido se deriva de numerador/denominador; la columna del Excel
+        # solo es respaldo para indicadores sin conteo (evita errores de tipeo).
+        # En unidades no porcentuales (ej. días) es un promedio: total/casos.
+        if numerador is not None and denominador:
+            bruto = numerador / denominador
+            es_porcentual = unidad in ("", "%")
+            obtenido = round(bruto * 100, 2) if es_porcentual else round(bruto, 2)
+        else:
+            obtenido = _float_o_none(valor(fila, "resultado_obtenido"))
+
+        diferencia = (
+            round(obtenido - esperado, 2)
+            if obtenido is not None and esperado is not None
+            else None
+        )
+
+        registros.append({
+            "codigo_proceso": codigo,
+            "proceso": _str_o_vacio(valor(fila, "proceso")),
+            "indicador": _str_o_vacio(valor(fila, "indicador")),
+            "sentido": sentido or "Ascendente",
+            "unidad": unidad,
+            "meta_texto": _meta_texto(meta_final, unidad, es_descendente),
+            "meta_final": meta_final,
+            "anio": _int_o_none(valor(fila, "anio")),
+            "mes": mes,
+            "numerador": numerador,
+            "denominador": denominador,
+            "resultado_esperado": esperado,
+            "resultado_obtenido": obtenido,
+            "diferencia": diferencia,
+            "modulo": codigo.split(".")[0],
+            "es_descendente": es_descendente,
+        })
+
+    return registros, []
 
 
 class ExcelStore:
@@ -132,10 +214,11 @@ class ExcelStore:
         for hoja in xl.sheet_names:
             try:
                 df_raw = xl.parse(hoja, header=None)
-                modulo = _extraer_modulo(df_raw.iloc[0, 0])
-                filas = _parsear_hoja(df_raw, modulo)
+                filas, avisos = _parsear_hoja(df_raw, hoja)
                 registros.extend(filas)
-                logger.info(f"  [{hoja}] → {modulo}: {len(filas)} registros")
+                advertencias.extend(avisos)
+                modulos = sorted({r["modulo"] for r in filas})
+                logger.info(f"  [{hoja}] → {modulos}: {len(filas)} registros")
             except Exception as e:
                 logger.warning(f"  Error en hoja '{hoja}': {e}")
                 advertencias.append(f"No se pudo leer la hoja '{hoja}' del Excel")

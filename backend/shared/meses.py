@@ -8,6 +8,7 @@ ORDEN_MESES: dict[str, int] = {
     "Julio": 7,
     "Agosto": 8,
     "Septiembre": 9,
+    "Setiembre": 9,  # variante usada en Perú
     "Octubre": 10,
     "Noviembre": 11,
     "Diciembre": 12,
