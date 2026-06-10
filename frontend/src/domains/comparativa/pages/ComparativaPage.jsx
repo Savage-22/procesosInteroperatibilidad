@@ -1,49 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
-import {
-    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-} from 'recharts'
+
+import { useDatos } from '../../../shared/hooks/useDatos'
+import ProcesoSelector from '../components/ProcesoSelector'
+import ComparativeLineChart from '../components/ComparativeLineChart'
 import { getComparativaData, transformarParaGrafico, getComparativaErrorMessage } from '../services/comparativaService'
 
-function ProcesoSelector({ procesos, seleccionados, onToggle, onTodos, onNinguno }) {
-    const modulos = [...new Set(procesos.map((p) => p.modulo))].sort()
-
-    return (
-        <div className="space-y-4">
-            <div className="flex gap-2">
-                <button onClick={onTodos} className="text-xs px-2 py-1 rounded bg-[#1e3654] text-white hover:bg-[#0c2f56] transition-colors">
-                    Todos
-                </button>
-                <button onClick={onNinguno} className="text-xs px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors">
-                    Ninguno
-                </button>
-            </div>
-            {modulos.map((mod) => (
-                <div key={mod}>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{mod}</p>
-                    {procesos
-                        .filter((p) => p.modulo === mod)
-                        .map((p) => (
-                            <label key={p.codigo} className="flex items-center gap-2 py-1 cursor-pointer hover:bg-gray-50 rounded px-1">
-                                <input
-                                    type="checkbox"
-                                    checked={seleccionados.has(p.codigo)}
-                                    onChange={() => onToggle(p.codigo)}
-                                    className="rounded"
-                                />
-                                <span
-                                    className="w-3 h-3 rounded-full shrink-0"
-                                    style={{ backgroundColor: p.color_hex }}
-                                />
-                                <span className="text-sm text-gray-700">{p.codigo}</span>
-                            </label>
-                        ))}
-                </div>
-            ))}
-        </div>
-    )
-}
-
 export default function ComparativaPage() {
+    const { version } = useDatos()
     const [procesos, setProcesos] = useState([])
     const [seleccionados, setSeleccionados] = useState(new Set())
     const [isLoading, setIsLoading] = useState(true)
@@ -57,7 +20,11 @@ export default function ComparativaPage() {
                 const data = await getComparativaData()
                 if (isMounted) {
                     setProcesos(data)
-                    setSeleccionados(new Set(data.map((p) => p.codigo)))
+                    setError(null)
+                    // Solo en la primera carga se seleccionan todos; en recargas se respeta la selección
+                    setSeleccionados((prev) =>
+                        prev.size === 0 ? new Set(data.map((p) => p.codigo)) : prev,
+                    )
                 }
             } catch (err) {
                 if (isMounted) setError(getComparativaErrorMessage(err))
@@ -68,7 +35,7 @@ export default function ComparativaPage() {
 
         cargar()
         return () => { isMounted = false }
-    }, [])
+    }, [version])
 
     const procesosSeleccionados = useMemo(
         () => procesos.filter((p) => seleccionados.has(p.codigo)),
@@ -79,14 +46,6 @@ export default function ComparativaPage() {
         () => transformarParaGrafico(procesosSeleccionados),
         [procesosSeleccionados],
     )
-
-    function handleToggle(codigo) {
-        setSeleccionados((prev) => {
-            const next = new Set(prev)
-            next.has(codigo) ? next.delete(codigo) : next.add(codigo)
-            return next
-        })
-    }
 
     if (isLoading) return (
         <div className="flex items-center justify-center h-64 gap-2 text-gray-500">
@@ -116,9 +75,7 @@ export default function ComparativaPage() {
                     <ProcesoSelector
                         procesos={procesos}
                         seleccionados={seleccionados}
-                        onToggle={handleToggle}
-                        onTodos={() => setSeleccionados(new Set(procesos.map((p) => p.codigo)))}
-                        onNinguno={() => setSeleccionados(new Set())}
+                        onSelectionChange={(codigos) => setSeleccionados(new Set(codigos))}
                     />
                 </div>
 
@@ -132,27 +89,7 @@ export default function ComparativaPage() {
                             Selecciona al menos un proceso
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height={320}>
-                            <LineChart data={datosGrafico} margin={{ top: 4, right: 24, left: 0, bottom: 4 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                                <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
-                                <YAxis domain={[0, 105]} tick={{ fontSize: 11 }} />
-                                <Tooltip formatter={(v) => v !== null ? [`${v?.toFixed(1)}%`] : ['Sin datos']} />
-                                <Legend />
-                                {procesosSeleccionados.map((p) => (
-                                    <Line
-                                        key={p.codigo}
-                                        type="monotone"
-                                        dataKey={p.codigo}
-                                        name={p.codigo}
-                                        stroke={p.color_hex}
-                                        strokeWidth={2}
-                                        dot={{ r: 3 }}
-                                        connectNulls={false}
-                                    />
-                                ))}
-                            </LineChart>
-                        </ResponsiveContainer>
+                        <ComparativeLineChart procesos={procesosSeleccionados} datos={datosGrafico} />
                     )}
                 </div>
             </div>

@@ -1,41 +1,12 @@
 import { useState, useEffect } from 'react'
-import {
-    ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
-    Tooltip, Legend, ResponsiveContainer, ReferenceLine, Cell,
-} from 'recharts'
+
+import SemaforoBadge from '../../../shared/components/SemaforoBadge'
+import { useDatos } from '../../../shared/hooks/useDatos'
+import ParetoChart from '../components/ParetoChart'
 import { getParetoData, getParetoErrorMessage } from '../services/paretoService'
 
-const SEMAFORO_COLOR = { Verde: '#1f7a47', Amarillo: '#f4d100', Rojo: '#9c1d1d' }
-const SEMAFORO_BADGE = {
-    Verde: 'bg-[#dcf8e8] text-[#1f7a47]',
-    Amarillo: 'bg-[#fef9c3] text-[#854d0e]',
-    Rojo: 'bg-[#ffe8e8] text-[#9c1d1d]',
-    'Sin datos': 'bg-gray-100 text-gray-500',
-}
-
-function SemaforoBadge({ semaforo }) {
-    return (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${SEMAFORO_BADGE[semaforo] ?? SEMAFORO_BADGE['Sin datos']}`}>
-            {semaforo}
-        </span>
-    )
-}
-
-const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null
-    return (
-        <div className="bg-white border border-gray-200 rounded-lg shadow-md p-3 text-xs">
-            <p className="font-semibold text-[#1e3654] mb-1">{label}</p>
-            {payload.map((entry) => (
-                <p key={entry.name} style={{ color: entry.color }}>
-                    {entry.name}: {entry.value?.toFixed(2)}{entry.name.includes('%') ? '%' : ' pp'}
-                </p>
-            ))}
-        </div>
-    )
-}
-
 export default function ParetoPage() {
+    const { version } = useDatos()
     const [datos, setDatos] = useState(null)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState(null)
@@ -46,7 +17,10 @@ export default function ParetoPage() {
         async function cargar() {
             try {
                 const data = await getParetoData()
-                if (isMounted) setDatos(data)
+                if (isMounted) {
+                    setDatos(data)
+                    setError(null)
+                }
             } catch (err) {
                 if (isMounted) setError(getParetoErrorMessage(err))
             } finally {
@@ -56,7 +30,7 @@ export default function ParetoPage() {
 
         cargar()
         return () => { isMounted = false }
-    }, [])
+    }, [version])
 
     if (isLoading) return (
         <div className="flex items-center justify-center h-64 gap-2 text-gray-500">
@@ -73,7 +47,13 @@ export default function ParetoPage() {
     )
 
     const { items, umbral_80 } = datos
-    const itemsCriticos = items.slice(0, umbral_80 + 1)
+
+    if (items.length === 0) return (
+        <div className="flex flex-col items-center justify-center h-64 gap-2 text-gray-500">
+            <span className="material-symbols-outlined text-4xl">database_off</span>
+            <p>No hay datos cargados. Verifica el archivo Excel del servidor.</p>
+        </div>
+    )
 
     return (
         <div className="space-y-6">
@@ -108,35 +88,7 @@ export default function ParetoPage() {
                 <h2 className="text-sm font-semibold text-[#1e3654] mb-4">
                     Diagrama Pareto — brecha por proceso y % acumulado
                 </h2>
-                <ResponsiveContainer width="100%" height={320}>
-                    <ComposedChart data={items} margin={{ top: 4, right: 40, left: 0, bottom: 4 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis dataKey="codigo" tick={{ fontSize: 11 }} />
-                        <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
-                        <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Legend />
-                        <ReferenceLine yAxisId="right" y={80} stroke="#9c1d1d" strokeDasharray="4 2"
-                            label={{ value: '80%', position: 'insideTopRight', fontSize: 10, fill: '#9c1d1d' }} />
-                        <Bar yAxisId="left" dataKey="brecha_pareto" name="Brecha (pp)" radius={[4, 4, 0, 0]}>
-                            {items.map((item, i) => (
-                                <Cell
-                                    key={item.codigo}
-                                    fill={i <= umbral_80 ? '#1e3654' : '#cbd5e1'}
-                                />
-                            ))}
-                        </Bar>
-                        <Line
-                            yAxisId="right"
-                            type="monotone"
-                            dataKey="porcentaje_acumulado"
-                            name="% acumulado"
-                            stroke="#f4d100"
-                            strokeWidth={2.5}
-                            dot={{ r: 4, fill: '#f4d100' }}
-                        />
-                    </ComposedChart>
-                </ResponsiveContainer>
+                <ParetoChart items={items} umbral80={umbral_80} />
             </div>
 
             {/* Tabla ranking */}
