@@ -132,8 +132,6 @@ Un archivo `datos_estandarizados.xlsx` con **una hoja por equipo/módulo** (el n
 
 Si falta una hoja o el archivo, el servidor arranca igual con los datos disponibles y la interfaz muestra una advertencia no bloqueante.
 
-> 💡 En `propuesta_formato_excel.xlsx` hay una **propuesta de formato mejorado** (solo datos crudos, tipo de indicador explícito, mes con lista desplegable, fuente de evidencia y hoja M4) para debatir en equipo antes de migrar.
-
 ## Tests
 
 ```bash
