@@ -1,5 +1,11 @@
-from shared.meses import ordenar_por_mes
+from shared.meses import mes_por_orden, orden_mes, ordenar_por_mes
 from shared.semaforo import calcular_semaforo
+
+# Pendiente (cambio por mes) por debajo de la cual la tendencia se
+# considera plana: medio punto porcentual mensual es ruido, no tendencia.
+_UMBRAL_ESTABLE = 0.5
+
+MES_DICIEMBRE = 12
 
 
 class ProcesoService:
@@ -89,6 +95,108 @@ class ProcesoService:
                 if valores_avance
                 else None
             ),
+        }
+
+    # ------------------------------------------------------------------ #
+    # Predicción de tendencia hasta diciembre                             #
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def calcular_prediccion(registros: list[dict]) -> dict | None:
+        """
+        Proyecta el resultado obtenido hasta diciembre mediante una
+        regresión lineal por mínimos cuadrados sobre los meses reportados.
+
+        Devuelve None si hay menos de 2 meses con datos (no se puede
+        trazar una tendencia). El valor proyectado se acota a un rango
+        razonable según la unidad: [0, 100] para porcentajes y [0, ∞)
+        para indicadores en otra unidad (ej. días).
+        """
+        es_descendente = registros[0].get("es_descendente", False)
+        meta_final = registros[0].get("meta_final")
+
+        # Puntos (orden_mes, valor) únicos y ordenados cronológicamente
+        puntos = sorted({
+            (orden_mes(r["mes"]), r["resultado_obtenido"])
+            for r in registros
+            if r.get("resultado_obtenido") is not None and orden_mes(r["mes"]) <= MES_DICIEMBRE
+        })
+
+        if len(puntos) < 2:
+            return None
+
+        n = len(puntos)
+        xs = [p[0] for p in puntos]
+        ys = [p[1] for p in puntos]
+        media_x = sum(xs) / n
+        media_y = sum(ys) / n
+        sxx = sum((x - media_x) ** 2 for x in xs)
+        sxy = sum((x - media_x) * (y - media_y) for x, y in zip(xs, ys))
+
+        # Todos los datos en el mismo mes: sin eje temporal, no hay tendencia
+        if sxx == 0:
+            return None
+
+        pendiente = sxy / sxx
+        intercepto = media_y - pendiente * media_x
+
+        # R²: qué tanto explican los meses la variación del resultado (0-1)
+        syy = sum((y - media_y) ** 2 for y in ys)
+        r_cuadrado = (sxy ** 2) / (sxx * syy) if syy > 0 else 1.0
+
+        def proyectar(x: int) -> float:
+            valor = intercepto + pendiente * x
+            if es_descendente:
+                return round(max(valor, 0.0), 2)
+            return round(min(max(valor, 0.0), 100.0), 2)
+
+        ultimo_mes = max(xs)
+        proyeccion = [
+            {"mes": mes_por_orden(x), "valor": proyectar(x)}
+            for x in range(ultimo_mes + 1, MES_DICIEMBRE + 1)
+        ]
+
+        valor_diciembre = proyectar(MES_DICIEMBRE)
+
+        # Mes (1-12) en que la recta cruza la meta por primera vez. Se usa la
+        # recta sin acotar para no perder el cruce por el tope del 100%.
+        mes_alcanza_meta = None
+        if meta_final is not None:
+            for x in range(1, MES_DICIEMBRE + 1):
+                valor = intercepto + pendiente * x
+                cumple = valor <= meta_final if es_descendente else valor >= meta_final
+                if cumple:
+                    mes_alcanza_meta = mes_por_orden(x)
+                    break
+
+        if meta_final is None:
+            alcanzara_meta = None
+        elif es_descendente:
+            alcanzara_meta = valor_diciembre <= meta_final
+        else:
+            alcanzara_meta = valor_diciembre >= meta_final
+
+        if abs(pendiente) < _UMBRAL_ESTABLE:
+            tendencia = "estable"
+        elif pendiente > 0:
+            tendencia = "ascendente"
+        else:
+            tendencia = "descendente"
+
+        return {
+            "pendiente": round(pendiente, 3),
+            "tendencia": tendencia,
+            "r_cuadrado": round(r_cuadrado, 3),
+            "meses_con_datos": n,
+            "valor_diciembre": valor_diciembre,
+            "meta_final": meta_final,
+            "alcanzara_meta": alcanzara_meta,
+            "mes_alcanza_meta": mes_alcanza_meta,
+            "es_descendente": es_descendente,
+            "historico": [
+                {"mes": mes_por_orden(x), "valor": round(y, 2)} for x, y in puntos
+            ],
+            "proyeccion": proyeccion,
         }
 
     # ------------------------------------------------------------------ #

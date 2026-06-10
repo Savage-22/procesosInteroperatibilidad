@@ -8,6 +8,7 @@ Aplicación web para el seguimiento y evaluación de procesos según la **Direct
 - **Detalle de proceso** (`/proceso/:codigo`) — resultado obtenido vs esperado, avance T1 mensual con umbrales 95/75 y tabla de datos
 - **Comparativa** (`/comparativa`) — líneas superpuestas de avance T1 con selector múltiple por módulo y leyenda interactiva
 - **Pareto** (`/pareto`) — ranking de criticidad por *brecha de avance* (100 − avance T1 promedio): identifica los procesos que concentran el 80% del incumplimiento respecto a lo esperado **a la fecha**, alineado con el semáforo
+- **Predicciones** (`/predicciones`) — proyección del resultado de cada proceso hasta diciembre mediante regresión lineal sobre los meses reportados: tendencia, valor estimado a fin de año, mes en que cruza la meta y nivel de confiabilidad (R²)
 - **Recarga en caliente** — al editar y guardar el Excel, el backend recarga los datos y el frontend se refresca solo (sin reiniciar nada)
 - **Carga desde la interfaz** — botón "Cargar Excel" en el navbar que sube un nuevo archivo de datos (`POST /api/upload`) y refresca todas las vistas al instante
 
@@ -111,6 +112,7 @@ npm run dev
 | GET | `/api/dashboard` | KPIs globales y distribución de semáforo |
 | GET | `/api/comparativa?codigos=M1.1,M2.2` | Avance T1 por proceso y mes (filtro opcional) |
 | GET | `/api/pareto` | Ranking Pareto con % acumulado y umbral 80 |
+| GET | `/api/predicciones` | Proyección de tendencia a diciembre por proceso (regresión lineal) |
 | GET | `/api/meta` | Versión de datos, última carga, módulos y advertencias |
 | POST | `/api/upload` | Sube un nuevo Excel de datos (multipart, campo `archivo`) |
 | GET | `/health` | Estado del servidor |
