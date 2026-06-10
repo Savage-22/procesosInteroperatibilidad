@@ -1,6 +1,6 @@
 # Dashboard CEPLAN — Ingeniería de Procesos (Interoperabilidad)
 
-Aplicación web para el seguimiento y evaluación de procesos según la **Directiva CEPLAN N° 0056-2024**. Lee los datos mensuales de los módulos M1, M2 y M3 desde un archivo Excel y los presenta en un dashboard con semáforos, comparativas y análisis de Pareto.
+Aplicación web para el seguimiento y evaluación de procesos según la **Directiva CEPLAN N° 0056-2024**. Lee los datos mensuales de los módulos M1, M2, M3 y M4 desde un archivo Excel y los presenta en un dashboard con semáforos, comparativas y análisis de Pareto.
 
 ## Funcionalidades
 
