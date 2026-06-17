@@ -2,6 +2,29 @@
 
 Aplicación web para el seguimiento y evaluación de procesos según la **Directiva CEPLAN N° 0056-2024**. Lee los datos mensuales de los módulos M1, M2, M3 y M4 desde un archivo Excel y los presenta en un dashboard con semáforos, comparativas y análisis de Pareto.
 
+## Inicio rápido (primera vez)
+
+**Requisitos previos** (instálalos si no los tienes):
+
+| Herramienta | Versión mínima | Descarga |
+|---|---|---|
+| Python | 3.11 + | https://www.python.org/downloads/ — marcar **"Add Python to PATH"** |
+| Node.js | 20 + | https://nodejs.org/ |
+| Git | cualquiera | https://git-scm.com/ |
+
+```bash
+# 1. Clonar el repositorio
+git clone <URL-del-repo>
+cd proyecto
+
+# 2. Ejecutar el script de arranque
+./start.sh        # Linux / macOS
+start.bat         # Windows  (doble clic o desde cmd)
+```
+
+El script instala todo automáticamente y abre el navegador en **http://localhost:5173**.
+No hace falta tocar ningún otro archivo.
+
 ## Funcionalidades
 
 - **Dashboard** (`/`) — KPIs globales, distribución de semáforo por proceso y tabla resumen ordenable
@@ -140,4 +163,43 @@ Si falta una hoja o el archivo, el servidor arranca igual con los datos disponib
 cd backend
 .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/python -m pytest        # Windows: .venv\Scripts\python -m pytest
+```
+
+## Solución de problemas frecuentes
+
+### "python no se reconoce como un comando" (Windows)
+
+Python no está en el PATH. Dos opciones:
+
+1. Reinstala Python desde https://www.python.org/downloads/ y marca **"Add Python to PATH"** durante la instalación.
+2. Busca en el menú inicio **"Editar las variables de entorno del sistema"** → Variables de entorno → PATH → agrega la carpeta donde instalaste Python (ej. `C:\Python312` y `C:\Python312\Scripts`).
+
+### El navegador abre pero sale "No se puede conectar" o pantalla en blanco
+
+El backend no arrancó correctamente. Abre la ventana llamada **"Backend - Dashboard CEPLAN"** y lee el error. Los más comunes:
+
+- `Address already in use` → el puerto 8000 ya está ocupado. Cierra el proceso que lo usa o cambia el puerto en el script.
+- `ModuleNotFoundError` → borra la carpeta `backend/.venv` y vuelve a ejecutar `start.bat` / `start.sh`.
+
+### "npm no se reconoce" (Windows)
+
+Node.js no está en el PATH. Reinstala Node.js desde https://nodejs.org/ y reinicia la terminal.
+
+### `start.sh: Permission denied` (Linux / macOS)
+
+```bash
+chmod +x start.sh
+./start.sh
+```
+
+### El frontend arranca pero los datos no cargan (error CORS o "Network Error")
+
+Verifica que el backend esté corriendo en http://localhost:8000. Abre esa URL en el navegador: si ves `{"status":"ok",...}` el backend está bien. Si no carga, revisa la ventana del backend.
+
+### Quiero reiniciar desde cero
+
+```bash
+# Borra las dependencias instaladas y vuelve a ejecutar el script
+rm -rf backend/.venv frontend/node_modules   # Linux/macOS
+# Windows: borra manualmente backend\.venv y frontend\node_modules
 ```
