@@ -231,3 +231,86 @@ def test_prediccion_un_solo_mes_repetido():
     # Dos registros en el mismo mes → sin eje temporal, no hay tendencia
     registros = [_registro("Enero", 50, 60), _registro("Enero", 70, 60)]
     assert ProcesoService.calcular_prediccion(registros) is None
+
+
+# ------------------------------------------------------------------ #
+# calcular_ponderadores                                               #
+# ------------------------------------------------------------------ #
+
+def test_ponderador_un_solo_indicador():
+    # Criterio 1: un solo indicador → ponderador 1.0
+    result = ProcesoService.calcular_ponderadores({"M1.1": 1})
+    assert result == {"M1.1": 1.0}
+
+
+def test_ponderador_dos_misma_relevancia():
+    # Dos con R=1: ponderadores iguales = 0.5 cada uno
+    result = ProcesoService.calcular_ponderadores({"M2.1": 1, "M2.2": 1})
+    assert abs(result["M2.1"] - 0.5) < 1e-5
+    assert abs(result["M2.2"] - 0.5) < 1e-5
+
+
+def test_ponderador_dos_distinta_relevancia():
+    # R=1 y R=2: R_min=2 → w(R1) = (2-0)/((2-0)+(2-1)) = 2/3, w(R2) = 1/3
+    result = ProcesoService.calcular_ponderadores({"M2.1": 1, "M2.2": 2})
+    assert abs(result["M2.1"] - 2/3) < 1e-5
+    assert abs(result["M2.2"] - 1/3) < 1e-5
+
+
+def test_ponderador_tres_distintos():
+    # R=1,2,3: R_min=3 → pesos brutos 3,2,1 → total=6 → 3/6, 2/6, 1/6
+    result = ProcesoService.calcular_ponderadores({"A": 1, "B": 2, "C": 3})
+    assert abs(result["A"] - 3/6) < 1e-5
+    assert abs(result["B"] - 2/6) < 1e-5
+    assert abs(result["C"] - 1/6) < 1e-5
+
+
+def test_ponderadores_suman_1():
+    result = ProcesoService.calcular_ponderadores({"X": 1, "Y": 2, "Z": 3})
+    assert abs(sum(result.values()) - 1.0) < 1e-5
+
+
+# ------------------------------------------------------------------ #
+# calcular_mejora                                                     #
+# ------------------------------------------------------------------ #
+
+def test_mejora_ascendente():
+    registros = [
+        _registro("Enero", 50, 60),
+        _registro("Febrero", 60, 70),
+        _registro("Marzo", 70, 80),
+    ]
+    mejora = ProcesoService.calcular_mejora(registros)
+    assert mejora["primer_mes"] == "Enero"
+    assert mejora["ultimo_mes"] == "Marzo"
+    assert mejora["mejora_absoluta"] == 20.0
+    assert mejora["es_mejora"] is True
+
+
+def test_mejora_descendente_valor():
+    registros = [
+        _registro("Enero", 30, 25, es_descendente=True),
+        _registro("Marzo", 22, 21, es_descendente=True),
+    ]
+    mejora = ProcesoService.calcular_mejora(registros)
+    assert mejora["mejora_absoluta"] == -8.0
+    # Para un indicador descendente, bajar es buena señal; es_mejora solo
+    # indica si el valor absoluto subió o bajó (no considera el sentido)
+    assert mejora["es_mejora"] is False
+
+
+def test_mejora_un_solo_mes_retorna_none():
+    registros = [_registro("Enero", 50, 60)]
+    assert ProcesoService.calcular_mejora(registros) is None
+
+
+def test_mejora_con_nones_ignora_meses_sin_datos():
+    registros = [
+        _registro("Enero", None, 60),
+        _registro("Febrero", 60, 70),
+        _registro("Marzo", 70, 80),
+    ]
+    mejora = ProcesoService.calcular_mejora(registros)
+    # Enero se ignora por ser None; primero válido = Febrero
+    assert mejora["primer_mes"] == "Febrero"
+    assert mejora["mejora_absoluta"] == 10.0

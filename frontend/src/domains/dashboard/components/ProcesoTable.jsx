@@ -1,22 +1,26 @@
 import { useState, useMemo } from 'react'
 
 import SemaforoBadge from '../../../shared/components/SemaforoBadge'
+import RelevanciaBadge from '../../../shared/components/RelevanciaBadge'
+import MejoraBadge from '../../../shared/components/MejoraBadge'
 
 const COLUMNAS = [
     { campo: 'codigo', label: 'Código' },
     { campo: 'proceso', label: 'Proceso' },
     { campo: 'modulo', label: 'Módulo' },
+    { campo: 'relevancia', label: 'Relevancia' },
     { campo: 'meta_final', label: 'Meta final' },
     { campo: 'promedio_resultado_obtenido', label: 'Prom. Obtenido' },
     { campo: 'promedio_avance_t1', label: 'Avance T1' },
+    { campo: 'mejora', label: 'Mejora' },
     { campo: 'brecha', label: 'Brecha' },
     { campo: 'semaforo', label: 'Semáforo' },
 ]
 
 function compararPor(campo, asc) {
     return (a, b) => {
-        const va = a[campo]
-        const vb = b[campo]
+        const va = campo === 'relevancia' ? (a.relevancia ?? 1) : a[campo]
+        const vb = campo === 'relevancia' ? (b.relevancia ?? 1) : b[campo]
         if (va === null || va === undefined) return 1
         if (vb === null || vb === undefined) return -1
         const cmp = typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb))
@@ -72,9 +76,15 @@ export default function ProcesoTable({ procesos, onRowClick }) {
                             <td className="px-4 py-3 font-mono font-semibold text-[#1e3654]">{p.codigo}</td>
                             <td className="px-4 py-3 text-gray-700 max-w-xs truncate">{p.proceso}</td>
                             <td className="px-4 py-3 text-gray-500">{p.modulo}</td>
+                            <td className="px-4 py-3">
+                                <RelevanciaBadge relevancia={p.relevancia} ponderador={p.ponderador} />
+                            </td>
                             <td className="px-4 py-3 text-gray-600">{p.meta_final}{p.es_descendente ? ' días' : '%'}</td>
                             <td className="px-4 py-3 text-gray-600">{p.promedio_resultado_obtenido?.toFixed(1)}</td>
                             <td className="px-4 py-3 font-medium text-[#1e3654]">{p.promedio_avance_t1?.toFixed(1)}%</td>
+                            <td className="px-4 py-3">
+                                <MejoraBadge mejora={p.mejora} unidad={p.es_descendente ? 'días' : '%'} />
+                            </td>
                             <td className="px-4 py-3 text-gray-600">{p.brecha?.toFixed(1)}</td>
                             <td className="px-4 py-3"><SemaforoBadge semaforo={p.semaforo} /></td>
                         </tr>

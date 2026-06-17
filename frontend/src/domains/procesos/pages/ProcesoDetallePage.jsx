@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 
 import SemaforoBadge from '../../../shared/components/SemaforoBadge'
+import RelevanciaBadge from '../../../shared/components/RelevanciaBadge'
+import MejoraBadge from '../../../shared/components/MejoraBadge'
 import { useDatos } from '../../../shared/hooks/useDatos'
 import ResultadoLineChart from '../components/ResultadoLineChart'
 import T1BarChart from '../components/T1BarChart'
@@ -75,6 +77,10 @@ export default function ProcesoDetallePage() {
                             {proceso.indicador && (
                                 <p className="text-sm text-gray-600 mt-1">{proceso.indicador}</p>
                             )}
+                            <div className="flex items-center gap-3 mt-2 flex-wrap">
+                                <RelevanciaBadge relevancia={proceso.relevancia} ponderador={proceso.ponderador} />
+                                <MejoraBadge mejora={proceso.mejora} unidad={unidad} />
+                            </div>
                         </div>
                         <div className="text-right shrink-0">
                             <p className="text-xs text-gray-500">Meta final</p>

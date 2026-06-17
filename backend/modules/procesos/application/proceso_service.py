@@ -200,6 +200,80 @@ class ProcesoService:
         }
 
     # ------------------------------------------------------------------ #
+    # Ponderación por relevancia — Tabla A5 Directiva N°0056-2024-CEPLAN #
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def calcular_ponderadores(relevancia_por_codigo: dict[str, int]) -> dict[str, float]:
+        """
+        Calcula el ponderador de cada indicador dentro de un elemento (módulo)
+        usando la fórmula de la Tabla A5:
+            w_k = (R_min - (R_k - 1)) / Σᵢ(R_min - (R_i - 1))
+
+        R_min es la relevancia mínima entre todos los indicadores del elemento.
+        Cuando el módulo tiene un solo indicador su ponderador es 1.0 (Criterio 1).
+        """
+        if not relevancia_por_codigo:
+            return {}
+
+        # R_min = grado de relevancia más baja (= mayor valor numérico, ya que R=3 < R=1)
+        # Según Tabla A5: con {R=1, R=2} → R_min=2; con {R=1,2,3} → R_min=3
+        r_min = max(relevancia_por_codigo.values())
+        pesos_brutos = {
+            codigo: r_min - (r - 1)
+            for codigo, r in relevancia_por_codigo.items()
+        }
+        total = sum(pesos_brutos.values())
+        if total == 0:
+            n = len(pesos_brutos)
+            return {codigo: round(1 / n, 6) for codigo in pesos_brutos}
+
+        return {
+            codigo: round(peso / total, 6)
+            for codigo, peso in pesos_brutos.items()
+        }
+
+    # ------------------------------------------------------------------ #
+    # Mejora entre primer y último mes reportado                           #
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def calcular_mejora(registros: list[dict]) -> dict | None:
+        """
+        Compara el resultado_obtenido del primer y último mes cronológico.
+        Devuelve None si hay menos de 2 meses con datos.
+        """
+        puntos = sorted(
+            [
+                (r["mes"], r["resultado_obtenido"])
+                for r in registros
+                if r.get("resultado_obtenido") is not None
+            ],
+            key=lambda p: orden_mes(p[0]),
+        )
+        if len(puntos) < 2:
+            return None
+
+        primer_mes, primer_val = puntos[0]
+        ultimo_mes, ultimo_val = puntos[-1]
+        mejora_absoluta = round(ultimo_val - primer_val, 2)
+
+        if primer_val != 0:
+            mejora_porcentual = round((mejora_absoluta / abs(primer_val)) * 100, 1)
+        else:
+            mejora_porcentual = None
+
+        return {
+            "primer_mes": primer_mes,
+            "ultimo_mes": ultimo_mes,
+            "primer_valor": round(primer_val, 2),
+            "ultimo_valor": round(ultimo_val, 2),
+            "mejora_absoluta": mejora_absoluta,
+            "mejora_porcentual": mejora_porcentual,
+            "es_mejora": mejora_absoluta >= 0,
+        }
+
+    # ------------------------------------------------------------------ #
     # Issue #10 — Análisis Pareto                                         #
     # ------------------------------------------------------------------ #
 
