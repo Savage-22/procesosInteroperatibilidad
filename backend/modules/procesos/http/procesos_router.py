@@ -29,7 +29,18 @@ def _agrupar_por_codigo(registros: list[dict]) -> dict[str, list[dict]]:
 
 @router.get("/procesos")
 def listar_procesos():
-    grupos = _agrupar_por_codigo(ExcelStore.get_all())
+    todos = ExcelStore.get_all()
+    grupos = _agrupar_por_codigo(todos)
+
+    # Ponderadores por módulo usando la fórmula CEPLAN Tabla A5
+    por_modulo: dict[str, dict[str, int]] = {}
+    for codigo, registros in grupos.items():
+        modulo = registros[0]["modulo"]
+        por_modulo.setdefault(modulo, {})[codigo] = registros[0].get("relevancia", 1)
+
+    ponderadores: dict[str, float] = {}
+    for modulo, rel_map in por_modulo.items():
+        ponderadores.update(ProcesoService.calcular_ponderadores(rel_map))
 
     resultado = []
     for codigo, registros in sorted(grupos.items()):
@@ -45,10 +56,13 @@ def listar_procesos():
             "meta_final": primer["meta_final"],
             "modulo": primer["modulo"],
             "es_descendente": primer["es_descendente"],
+            "relevancia": primer.get("relevancia", 1),
+            "ponderador": ponderadores.get(codigo, 1.0),
             "promedio_resultado_obtenido": promedios["promedio_resultado_obtenido"],
             "promedio_avance_t1": avance,
             "semaforo": calcular_semaforo(avance),
             "brecha": ProcesoService.calcular_brecha(registros),
+            "mejora": ProcesoService.calcular_mejora(registros),
         })
 
     return {"success": True, "data": resultado}
@@ -84,6 +98,16 @@ def detalle_proceso(codigo: str):
             "semaforo": calcular_semaforo(avance),
         })
 
+    # Relevancia y ponderador dentro del módulo
+    modulo = primer["modulo"]
+    rel_dedup: dict[str, int] = {}
+    for r in ExcelStore.get_por_modulo(modulo):
+        c = r.get("codigo_proceso")
+        if c and c not in rel_dedup:
+            rel_dedup[c] = r.get("relevancia", 1)
+
+    ponderadores_mod = ProcesoService.calcular_ponderadores(rel_dedup)
+
     return {
         "success": True,
         "data": {
@@ -92,7 +116,11 @@ def detalle_proceso(codigo: str):
             "indicador": primer["indicador"],
             "meta_texto": primer["meta_texto"],
             "meta_final": primer["meta_final"],
+            "modulo": modulo,
             "es_descendente": primer["es_descendente"],
+            "relevancia": primer.get("relevancia", 1),
+            "ponderador": ponderadores_mod.get(codigo.upper(), 1.0),
+            "mejora": ProcesoService.calcular_mejora(registros),
             "meses": meses,
         },
     }
@@ -175,7 +203,17 @@ def comparativa(codigos: str | None = Query(default=None)):
 
 @router.get("/predicciones")
 def predicciones():
-    grupos = _agrupar_por_codigo(ExcelStore.get_all())
+    todos = ExcelStore.get_all()
+    grupos = _agrupar_por_codigo(todos)
+
+    por_modulo: dict[str, dict[str, int]] = {}
+    for codigo, registros in grupos.items():
+        modulo = registros[0]["modulo"]
+        por_modulo.setdefault(modulo, {})[codigo] = registros[0].get("relevancia", 1)
+
+    ponderadores: dict[str, float] = {}
+    for modulo, rel_map in por_modulo.items():
+        ponderadores.update(ProcesoService.calcular_ponderadores(rel_map))
 
     resultado = []
     for codigo, registros in sorted(grupos.items()):
@@ -190,6 +228,8 @@ def predicciones():
             "indicador": primer["indicador"],
             "modulo": primer["modulo"],
             "unidad": "días" if primer["es_descendente"] else "%",
+            "relevancia": primer.get("relevancia", 1),
+            "ponderador": ponderadores.get(codigo, 1.0),
             "semaforo": calcular_semaforo(avance),
             "prediccion": prediccion,
         })

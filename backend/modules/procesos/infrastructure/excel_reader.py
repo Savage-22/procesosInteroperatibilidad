@@ -70,6 +70,8 @@ def _mapear_columnas(fila) -> dict[str, int]:
             indices.setdefault("proceso", i)
         elif h == "indicador":
             indices.setdefault("indicador", i)
+        elif "relevancia" in h:
+            indices.setdefault("relevancia", i)
         elif "sentido" in h or h.startswith("tipo"):
             indices.setdefault("sentido", i)
         elif "unidad" in h:
@@ -158,6 +160,9 @@ def _parsear_hoja(df_raw: pd.DataFrame, hoja: str) -> tuple[list[dict], list[str
             else None
         )
 
+        relevancia_raw = _int_o_none(valor(fila, "relevancia"))
+        relevancia = relevancia_raw if relevancia_raw in (1, 2, 3) else 1
+
         registros.append({
             "codigo_proceso": codigo,
             "proceso": _str_o_vacio(valor(fila, "proceso")),
@@ -175,6 +180,7 @@ def _parsear_hoja(df_raw: pd.DataFrame, hoja: str) -> tuple[list[dict], list[str
             "diferencia": diferencia,
             "modulo": codigo.split(".")[0],
             "es_descendente": es_descendente,
+            "relevancia": relevancia,
         })
 
     return registros, []

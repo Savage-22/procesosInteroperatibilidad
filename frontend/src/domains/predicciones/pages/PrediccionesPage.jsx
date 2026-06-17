@@ -4,6 +4,7 @@ import { useDatos } from '../../../shared/hooks/useDatos'
 import KpiCard from '../../dashboard/components/KpiCard'
 import EstadoMetaBadge from '../components/EstadoMetaBadge'
 import PrediccionLineChart from '../components/PrediccionLineChart'
+import RelevanciaBadge from '../../../shared/components/RelevanciaBadge'
 import {
     getPrediccionesData,
     getPrediccionesErrorMessage,
@@ -135,7 +136,7 @@ export default function PrediccionesPage() {
                     <table className="w-full text-sm">
                         <thead className="bg-[#f2f4f7] text-gray-600 text-xs uppercase tracking-wide">
                             <tr>
-                                {['Código', 'Proceso', 'Módulo', 'Tendencia', 'Proy. diciembre', 'Meta', 'Alcanza meta en', 'Confiabilidad', 'Estado'].map((h) => (
+                                {['Código', 'Proceso', 'Módulo', 'Relevancia', 'Tendencia', 'Proy. diciembre', 'Meta', 'Alcanza meta en', 'Confiabilidad', 'Estado'].map((h) => (
                                     <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
                                 ))}
                             </tr>
@@ -234,6 +235,9 @@ function FilaResumen({ proceso, activo, onClick }) {
             <td className="px-4 py-3 font-mono font-semibold text-[#1e3654]">{proceso.codigo}</td>
             <td className="px-4 py-3 text-gray-700 max-w-xs truncate">{proceso.proceso}</td>
             <td className="px-4 py-3 text-gray-500">{proceso.modulo}</td>
+            <td className="px-4 py-3">
+                <RelevanciaBadge relevancia={proceso.relevancia} ponderador={proceso.ponderador} compacto />
+            </td>
             {prediccion ? (
                 <>
                     <td className="px-4 py-3">
@@ -249,7 +253,7 @@ function FilaResumen({ proceso, activo, onClick }) {
                     <td className="px-4 py-3"><EstadoMetaBadge prediccion={prediccion} /></td>
                 </>
             ) : (
-                <td className="px-4 py-3 text-gray-400 italic" colSpan={6}>Sin datos suficientes para proyectar</td>
+                <td className="px-4 py-3 text-gray-400 italic" colSpan={7}>Sin datos suficientes para proyectar</td>
             )}
         </tr>
     )
