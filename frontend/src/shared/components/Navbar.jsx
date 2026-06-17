@@ -9,6 +9,7 @@ const LINKS = [
     { to: '/comparativa', label: 'Comparativa', icon: 'compare_arrows' },
     { to: '/pareto', label: 'Pareto', icon: 'bar_chart' },
     { to: '/predicciones', label: 'Predicciones', icon: 'insights' },
+    { to: '/metodologia', label: 'Metodología', icon: 'menu_book' },
 ]
 
 function formatearHora(iso) {
