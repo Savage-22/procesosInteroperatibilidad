@@ -170,6 +170,34 @@ def comparativa(codigos: str | None = Query(default=None)):
 
 
 # ------------------------------------------------------------------ #
+# GET /api/predicciones — proyección de tendencia hasta diciembre     #
+# ------------------------------------------------------------------ #
+
+@router.get("/predicciones")
+def predicciones():
+    grupos = _agrupar_por_codigo(ExcelStore.get_all())
+
+    resultado = []
+    for codigo, registros in sorted(grupos.items()):
+        primer = registros[0]
+        prediccion = ProcesoService.calcular_prediccion(registros)
+        promedios = ProcesoService.calcular_promedios(registros)
+        avance = promedios["promedio_avance_t1"]
+
+        resultado.append({
+            "codigo": codigo,
+            "proceso": primer["proceso"],
+            "indicador": primer["indicador"],
+            "modulo": primer["modulo"],
+            "unidad": "días" if primer["es_descendente"] else "%",
+            "semaforo": calcular_semaforo(avance),
+            "prediccion": prediccion,
+        })
+
+    return {"success": True, "data": resultado}
+
+
+# ------------------------------------------------------------------ #
 # Issue #15 — GET /api/pareto                                         #
 # ------------------------------------------------------------------ #
 

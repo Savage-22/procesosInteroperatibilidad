@@ -8,6 +8,7 @@ const LINKS = [
     { to: '/', label: 'Dashboard', icon: 'dashboard' },
     { to: '/comparativa', label: 'Comparativa', icon: 'compare_arrows' },
     { to: '/pareto', label: 'Pareto', icon: 'bar_chart' },
+    { to: '/predicciones', label: 'Predicciones', icon: 'insights' },
 ]
 
 function formatearHora(iso) {

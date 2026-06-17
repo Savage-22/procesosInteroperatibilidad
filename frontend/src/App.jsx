@@ -9,6 +9,7 @@ import DashboardPage from './domains/dashboard/pages/DashboardPage'
 import ProcesoDetallePage from './domains/procesos/pages/ProcesoDetallePage'
 import ComparativaPage from './domains/comparativa/pages/ComparativaPage'
 import ParetoPage from './domains/pareto/pages/ParetoPage'
+import PrediccionesPage from './domains/predicciones/pages/PrediccionesPage'
 
 export default function App() {
     return (
@@ -24,6 +25,7 @@ export default function App() {
                                 <Route path="/proceso/:codigo" element={<ProcesoDetallePage />} />
                                 <Route path="/comparativa" element={<ComparativaPage />} />
                                 <Route path="/pareto" element={<ParetoPage />} />
+                                <Route path="/predicciones" element={<PrediccionesPage />} />
                                 <Route path="*" element={<NotFoundPage />} />
                             </Routes>
                         </main>

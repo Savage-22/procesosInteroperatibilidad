@@ -160,3 +160,74 @@ def test_pareto_sin_brecha_total_no_divide_por_cero():
     ]
     items = ProcesoService.calcular_pareto(registros)
     assert items[0]["porcentaje_acumulado"] == 100.0
+
+
+# ------------------------------------------------------------------ #
+# calcular_prediccion                                                 #
+# ------------------------------------------------------------------ #
+
+def test_prediccion_necesita_dos_meses():
+    assert ProcesoService.calcular_prediccion([_registro("Enero", 50, 60)]) is None
+
+
+def test_prediccion_sin_datos_obtenidos():
+    registros = [_registro("Enero", None, 60), _registro("Febrero", None, 70)]
+    assert ProcesoService.calcular_prediccion(registros) is None
+
+
+def test_prediccion_tendencia_lineal_perfecta():
+    # +10 por mes: Enero 50 … Mayo 90 → diciembre proyectado se acota a 100
+    registros = [
+        _registro("Enero", 50, 50, meta_final=90),
+        _registro("Febrero", 60, 60, meta_final=90),
+        _registro("Marzo", 70, 70, meta_final=90),
+        _registro("Abril", 80, 80, meta_final=90),
+        _registro("Mayo", 90, 90, meta_final=90),
+    ]
+    pred = ProcesoService.calcular_prediccion(registros)
+    assert pred["pendiente"] == 10.0
+    assert pred["tendencia"] == "ascendente"
+    assert pred["r_cuadrado"] == 1.0
+    # Junio (mes 6) sería 100; se acota al tope porcentual
+    assert pred["valor_diciembre"] == 100.0
+    assert pred["alcanzara_meta"] is True
+    # La recta (40 + 10·mes) cruza la meta 90 en el mes 5 → Mayo
+    assert pred["mes_alcanza_meta"] == "Mayo"
+    # La proyección arranca en el mes siguiente al último con datos
+    assert pred["proyeccion"][0]["mes"] == "Junio"
+    assert pred["proyeccion"][-1]["mes"] == "Diciembre"
+    assert len(pred["historico"]) == 5
+
+
+def test_prediccion_estancada_no_alcanza_meta():
+    # Plano en 60 con meta 90: nunca llega
+    registros = [
+        _registro("Enero", 60, 60, meta_final=90),
+        _registro("Febrero", 60, 70, meta_final=90),
+        _registro("Marzo", 60, 80, meta_final=90),
+    ]
+    pred = ProcesoService.calcular_prediccion(registros)
+    assert pred["tendencia"] == "estable"
+    assert pred["valor_diciembre"] == 60.0
+    assert pred["alcanzara_meta"] is False
+    assert pred["mes_alcanza_meta"] is None
+
+
+def test_prediccion_descendente_compara_al_reves():
+    # "Menor es mejor": baja de 30 a 22 días, meta ≤ 20
+    registros = [
+        _registro("Enero", 30, 25, meta_final=20, es_descendente=True),
+        _registro("Febrero", 26, 23, meta_final=20, es_descendente=True),
+        _registro("Marzo", 22, 21, meta_final=20, es_descendente=True),
+    ]
+    pred = ProcesoService.calcular_prediccion(registros)
+    assert pred["tendencia"] == "descendente"
+    # Proyección de días no se acota a 100
+    assert pred["valor_diciembre"] < 20
+    assert pred["alcanzara_meta"] is True
+
+
+def test_prediccion_un_solo_mes_repetido():
+    # Dos registros en el mismo mes → sin eje temporal, no hay tendencia
+    registros = [_registro("Enero", 50, 60), _registro("Enero", 70, 60)]
+    assert ProcesoService.calcular_prediccion(registros) is None

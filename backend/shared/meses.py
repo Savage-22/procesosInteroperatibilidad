@@ -15,9 +15,20 @@ ORDEN_MESES: dict[str, int] = {
 }
 
 
+MESES_ORDENADOS = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+]
+
+
 def orden_mes(mes: str) -> int:
     """Devuelve el número de orden de un mes para uso como key de ordenamiento."""
     return ORDEN_MESES.get(mes, 99)
+
+
+def mes_por_orden(n: int) -> str:
+    """Inverso de orden_mes: del número (1-12) al nombre canónico del mes."""
+    return MESES_ORDENADOS[n - 1] if 1 <= n <= 12 else "?"
 
 
 def ordenar_por_mes(registros: list[dict], campo: str = "mes") -> list[dict]:
