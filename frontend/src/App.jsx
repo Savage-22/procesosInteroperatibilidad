@@ -11,6 +11,7 @@ import ComparativaPage from './domains/comparativa/pages/ComparativaPage'
 import ParetoPage from './domains/pareto/pages/ParetoPage'
 import PrediccionesPage from './domains/predicciones/pages/PrediccionesPage'
 import MetodologiaPage from './domains/metodologia/pages/MetodologiaPage'
+import ObjetivosPage from './domains/objetivos/pages/ObjetivosPage'
 
 export default function App() {
     return (
@@ -28,6 +29,7 @@ export default function App() {
                                 <Route path="/pareto" element={<ParetoPage />} />
                                 <Route path="/predicciones" element={<PrediccionesPage />} />
                                 <Route path="/metodologia" element={<MetodologiaPage />} />
+                                <Route path="/objetivos" element={<ObjetivosPage />} />
                                 <Route path="*" element={<NotFoundPage />} />
                             </Routes>
                         </main>
