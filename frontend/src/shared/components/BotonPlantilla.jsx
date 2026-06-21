@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import httpClient from '../../infrastructure/httpClient'
 
-export default function BotonPlantilla() {
+export default function BotonPlantilla({ iconOnly = false }) {
     const [descargando, setDescargando] = useState(false)
 
     async function handleDescargar() {
@@ -31,7 +31,7 @@ export default function BotonPlantilla() {
             <span className={`material-symbols-outlined text-base ${descargando ? 'animate-spin' : ''}`}>
                 {descargando ? 'progress_activity' : 'download'}
             </span>
-            Plantilla
+            {!iconOnly && 'Plantilla'}
         </button>
     )
 }

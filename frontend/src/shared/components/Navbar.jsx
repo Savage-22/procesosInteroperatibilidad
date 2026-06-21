@@ -7,11 +7,11 @@ import BotonPlantilla from './BotonPlantilla'
 
 const LINKS = [
     { to: '/', label: 'Dashboard', icon: 'dashboard' },
+    { to: '/objetivos',   label: 'Objetivos',   icon: 'flag' },
     { to: '/comparativa', label: 'Comparativa', icon: 'compare_arrows' },
     { to: '/pareto', label: 'Pareto', icon: 'bar_chart' },
     { to: '/predicciones', label: 'Predicciones', icon: 'insights' },
     { to: '/metodologia', label: 'Metodología', icon: 'menu_book' },
-    { to: '/objetivos',   label: 'Objetivos',   icon: 'flag' },
 ]
 
 function formatearHora(iso) {
@@ -29,7 +29,7 @@ function NavLinks({ onNavigate }) {
             end={to === '/'}
             onClick={onNavigate}
             className={({ isActive }) =>
-                `flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                `flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     isActive
                         ? 'bg-[#f4d100] text-[#1e3654]'
                         : 'text-white/80 hover:text-white hover:bg-white/10'
@@ -59,10 +59,10 @@ export default function Navbar() {
                         </div>
                     </div>
 
-                    <div className="hidden md:flex items-center gap-1">
+                    <div className="hidden lg:flex items-center gap-0.5">
                         <NavLinks />
-                        <BotonCargarExcel />
-                        <BotonPlantilla />
+                        <BotonCargarExcel iconOnly />
+                        <BotonPlantilla iconOnly />
                         {procesosEnRojo > 0 && (
                             <span
                                 className="relative ml-2 flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#9c1d1d] text-white text-xs font-bold animate-pulse"
@@ -82,7 +82,7 @@ export default function Navbar() {
 
                     <button
                         onClick={() => setIsMenuAbierto((prev) => !prev)}
-                        className="md:hidden text-white p-2 rounded-lg hover:bg-white/10 transition-colors"
+                        className="lg:hidden text-white p-2 rounded-lg hover:bg-white/10 transition-colors"
                         aria-label="Abrir menú"
                     >
                         <span className="material-symbols-outlined">{isMenuAbierto ? 'close' : 'menu'}</span>
@@ -90,7 +90,7 @@ export default function Navbar() {
                 </div>
 
                 {isMenuAbierto && (
-                    <div className="md:hidden pb-3 flex flex-col gap-1">
+                    <div className="lg:hidden pb-3 flex flex-col gap-1">
                         <NavLinks onNavigate={() => setIsMenuAbierto(false)} />
                         <BotonCargarExcel />
                         <BotonPlantilla />

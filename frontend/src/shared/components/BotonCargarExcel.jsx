@@ -10,7 +10,7 @@ const ICONO_ESTADO = {
     error: 'error',
 }
 
-export default function BotonCargarExcel() {
+export default function BotonCargarExcel({ iconOnly = false }) {
     const inputRef = useRef(null)
     const { refrescar } = useDatos()
     const [estado, setEstado] = useState('idle')
@@ -58,7 +58,7 @@ export default function BotonCargarExcel() {
                 <span className={`material-symbols-outlined text-base ${estado === 'loading' ? 'animate-spin' : ''}`}>
                     {ICONO_ESTADO[estado]}
                 </span>
-                {estado === 'ok' ? 'Datos cargados' : estado === 'error' ? 'Error al subir' : 'Cargar Excel'}
+                {!iconOnly && (estado === 'ok' ? 'Datos cargados' : estado === 'error' ? 'Error al subir' : 'Cargar Excel')}
             </button>
         </>
     )
