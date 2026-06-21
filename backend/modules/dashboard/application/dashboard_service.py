@@ -19,6 +19,75 @@ class DashboardService:
         )
 
     @staticmethod
+    def obtener_resumen_institucional(por_codigo: dict[str, list[dict]]) -> dict:
+        """
+        Consolida el avance por módulo y calcula el puntaje institucional global.
+
+        Por módulo:
+          - avance_ponderado: promedio del avance T1 de sus procesos, ponderado
+            por relevancia (Tabla A5). Si un proceso no tiene datos se excluye.
+          - en_riesgo: procesos cuya predicción lineal indica que no alcanzarán
+            la meta anual. Los que no tienen suficientes datos se omiten.
+
+        Puntaje global: promedio simple de los avances ponderados por módulo,
+        ya que cada módulo representa una dimensión independiente.
+        """
+        por_modulo: dict[str, list[str]] = {}
+        for codigo, registros in por_codigo.items():
+            modulo = registros[0]["modulo"]
+            por_modulo.setdefault(modulo, []).append(codigo)
+
+        resumen_modulos = []
+        for modulo in sorted(por_modulo):
+            codigos = por_modulo[modulo]
+
+            # Relevancia y ponderadores dentro del módulo
+            relevancia_map = {
+                c: por_codigo[c][0].get("relevancia", 1) for c in codigos
+            }
+            ponderadores = ProcesoService.calcular_ponderadores(relevancia_map)
+
+            avance_ponderado = None
+            suma_pesos = 0.0
+            suma_avance = 0.0
+            en_riesgo = 0
+
+            for codigo in codigos:
+                registros = por_codigo[codigo]
+                avance = ProcesoService.calcular_promedios(registros)["promedio_avance_t1"]
+                peso = ponderadores.get(codigo, 0.0)
+
+                if avance is not None:
+                    suma_avance += avance * peso
+                    suma_pesos += peso
+
+                pred = ProcesoService.calcular_prediccion(registros)
+                if pred is not None and pred.get("alcanzara_meta") is False:
+                    en_riesgo += 1
+
+            if suma_pesos > 0:
+                avance_ponderado = round(suma_avance / suma_pesos, 1)
+
+            resumen_modulos.append({
+                "modulo": modulo,
+                "avance_ponderado": avance_ponderado,
+                "semaforo": calcular_semaforo(avance_ponderado),
+                "total_procesos": len(codigos),
+                "en_riesgo": en_riesgo,
+            })
+
+        avances_con_datos = [m["avance_ponderado"] for m in resumen_modulos if m["avance_ponderado"] is not None]
+        puntaje_global = round(sum(avances_con_datos) / len(avances_con_datos), 1) if avances_con_datos else None
+        total_en_riesgo = sum(m["en_riesgo"] for m in resumen_modulos)
+
+        return {
+            "puntaje_global": puntaje_global,
+            "semaforo_global": calcular_semaforo(puntaje_global),
+            "por_modulo": resumen_modulos,
+            "total_en_riesgo": total_en_riesgo,
+        }
+
+    @staticmethod
     def obtener_kpis() -> dict:
         todos = ExcelStore.get_all()
 
@@ -80,4 +149,5 @@ class DashboardService:
             "porcentaje_rojo": round(rojos / total * 100, 1) if total else 0,
             "proceso_mas_critico": critico,
             "distribucion_semaforo": distribucion_semaforo,
+            "resumen_institucional": DashboardService.obtener_resumen_institucional(por_codigo),
         }

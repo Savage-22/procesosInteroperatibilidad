@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import SemaforoBadge from '../../../shared/components/SemaforoBadge'
 import { useDatos } from '../../../shared/hooks/useDatos'
 import KpiCard from '../components/KpiCard'
+import ResumenGestion from '../components/ResumenGestion'
 import SemaforoBarChart from '../components/SemaforoBarChart'
 import ProcesoTable from '../components/ProcesoTable'
 import { getDashboardData, getDashboardErrorMessage } from '../services/dashboardService'
@@ -98,6 +99,9 @@ export default function DashboardPage() {
                     </div>
                 </div>
             )}
+
+            {/* Resumen institucional */}
+            <ResumenGestion resumen={kpis.resumen_institucional} />
 
             {/* Gráfico semáforo por proceso */}
             <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
