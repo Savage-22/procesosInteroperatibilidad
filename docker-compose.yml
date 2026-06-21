@@ -1,21 +1,26 @@
-# Dashboard CEPLAN — docker compose up --build
-# Frontend: http://localhost:8080 | API: proxy interno via nginx
+# Dashboard CEPLAN
+# Desarrollo:  docker compose up --build
+# Producción:  ALLOWED_ORIGINS=https://tu-dominio.com docker compose up --build -d
+#              (o crea un .env en esta carpeta con ALLOWED_ORIGINS=https://...)
 services:
   backend:
     build: ./backend
+    restart: unless-stopped
     environment:
       EXCEL_PATH: /data/datos_estandarizados.xlsx
-      ALLOWED_ORIGINS: http://localhost:8080
-    # Se monta el directorio (no el archivo) para que la recarga en caliente
-    # detecte el reemplazo de inode que hace Excel al guardar; con escritura
-    # porque POST /api/upload reemplaza el archivo
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080}
     volumes:
-      - ./:/data
+      - excel_data:/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
       timeout: 3s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
 
   frontend:
     build:
@@ -27,3 +32,12 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "2m"
+        max-file: "1"
+
+volumes:
+  excel_data:

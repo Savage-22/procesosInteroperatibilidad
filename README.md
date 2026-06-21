@@ -2,28 +2,32 @@
 
 Aplicación web para el seguimiento y evaluación de procesos según la **Directiva CEPLAN N° 0056-2024**. Lee los datos mensuales de los módulos M1, M2, M3 y M4 desde un archivo Excel y los presenta en un dashboard con semáforos, comparativas y análisis de Pareto.
 
-## Inicio rápido (primera vez)
+## Inicio rápido (Docker — recomendado)
 
-**Requisitos previos** (instálalos si no los tienes):
-
-| Herramienta | Versión mínima | Descarga |
-|---|---|---|
-| Python | 3.11 + | https://www.python.org/downloads/ — marcar **"Add Python to PATH"** |
-| Node.js | 20 + | https://nodejs.org/ |
-| Git | cualquiera | https://git-scm.com/ |
+Requiere [Docker](https://docs.docker.com/engine/install/) instalado.
 
 ```bash
-# 1. Clonar el repositorio
 git clone <URL-del-repo>
 cd proyecto
-
-# 2. Ejecutar el script de arranque
-./start.sh        # Linux / macOS
-start.bat         # Windows  (doble clic o desde cmd)
+docker compose up --build
 ```
 
-El script instala todo automáticamente y abre el navegador en **http://localhost:5173**.
-No hace falta tocar ningún otro archivo.
+Abre **http://localhost:8080** en el navegador.
+El primer arranque construye las imágenes (~2 min). Los siguientes arranques son instantáneos.
+
+> **Windows**: usa Docker Desktop. Si tu usuario no tiene permisos en Linux, agrégate al grupo docker: `sudo usermod -aG docker $USER` (requiere cerrar sesión).
+
+## Desarrollo local (sin Docker)
+
+Requiere Python 3.11 + y Node.js 20 +.
+
+```bash
+./start.sh        # Linux / macOS
+```
+
+El script crea el venv, instala dependencias y levanta ambos servidores:
+- Backend: http://localhost:8000
+- Frontend: http://localhost:5173
 
 ## Funcionalidades
 
@@ -65,18 +69,87 @@ proyecto/
         └── infrastructure/     # httpClient (axios)
 ```
 
-## Ejecución con Docker (recomendado)
+## Despliegue en producción (GCP / VPS)
 
-Requiere Docker Desktop (Windows) o Docker Engine + Compose (Linux).
+Requiere Docker Engine + Docker Compose en el servidor, y Nginx en el host para SSL.
+
+### 1 — Clonar y configurar
 
 ```bash
-docker compose up --build
+git clone <URL-del-repo>
+cd proyecto
+cp .env.example .env
+# Editar .env y cambiar ALLOWED_ORIGINS a tu dominio:
+# ALLOWED_ORIGINS=https://interoperatibilidad.devteamaadj.xyz
 ```
 
-- Frontend: **http://localhost:8080**
-- El Excel se monta como volumen: editarlo en el host actualiza la app en ~15 s sin reconstruir nada.
+### 2 — Configurar Nginx en el host (SSL)
 
-> En Linux, si tu usuario no está en el grupo `docker`, usa `sudo docker compose up --build` o agrégate al grupo: `sudo usermod -aG docker $USER` (requiere cerrar sesión).
+```bash
+# Copiar la plantilla de configuración al servidor
+sudo cp nginx/interoperatibilidad.devteamaadj.xyz.conf \
+        /etc/nginx/sites-available/interoperatibilidad.devteamaadj.xyz
+sudo ln -s /etc/nginx/sites-available/interoperatibilidad.devteamaadj.xyz \
+           /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+
+# Obtener certificado SSL con certbot (solo la primera vez)
+sudo certbot --nginx -d interoperatibilidad.devteamaadj.xyz
+```
+
+### 3 — Levantar los contenedores
+
+```bash
+docker compose up --build -d
+```
+
+El frontend queda en el puerto `8080` del servidor; Nginx lo expone por HTTPS al exterior.
+
+### 4 — Cargar el Excel inicial
+
+En la primera ejecución el volumen está vacío. Hay dos formas de cargar los datos:
+
+**Opción A (recomendada)** — desde la interfaz web: abre el dashboard, haz clic en el ícono de subir Excel en el navbar y sube el archivo.
+
+**Opción B** — copiar directamente al volumen:
+```bash
+docker compose cp datos_estandarizados.xlsx backend:/data/datos_estandarizados.xlsx
+```
+
+### Actualizar la aplicación
+
+```bash
+git pull
+docker compose up --build -d
+# El Excel en el volumen se conserva; no es necesario volver a subirlo.
+# Las imágenes antiguas quedan en caché; límpialas si el espacio es ajustado:
+docker image prune -f
+```
+
+### Apagar / reiniciar
+
+```bash
+docker compose down       # detiene sin borrar el volumen (datos conservados)
+docker compose down -v    # borra también el volumen (⚠ elimina el Excel guardado)
+```
+
+### Liberar espacio en disco
+
+```bash
+# Ver cuánto ocupa Docker en total
+docker system df
+
+# Borrar imágenes sin usar, contenedores parados y caché de capas
+# (los volúmenes con datos se conservan)
+docker system prune -f
+
+# Borrar TODO incluyendo volúmenes (⚠ borra el Excel guardado)
+docker system prune --volumes -f
+```
+
+> **Nota sobre almacenamiento**: el Excel subido siempre sobrescribe el archivo anterior; no se acumula. El único espacio variable son los logs de los contenedores, limitados a **~12 MB total** por la configuración de este compose.
+
+---
 
 ## Ejecución en modo desarrollo (sin Docker)
 
@@ -88,16 +161,7 @@ Requisitos: Python 3.12+, Node.js 20+.
 ./start.sh
 ```
 
-**Windows:**
-
-```bat
-start.bat
-```
-
-Los scripts crean el venv, instalan dependencias y levantan ambos servidores:
-
-- Backend: http://localhost:8000 (docs interactivas en `/docs`)
-- Frontend: http://localhost:5173
+Levanta backend en http://localhost:8000 y frontend en http://localhost:5173.
 
 <details>
 <summary>Pasos manuales equivalentes</summary>
@@ -106,7 +170,7 @@ Los scripts crean el venv, instalan dependencias y levantan ambos servidores:
 # Backend
 cd backend
 python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt        # Windows: .venv\Scripts\pip
+.venv/bin/pip install -r requirements.txt
 .venv/bin/uvicorn main:app --reload --port 8000
 
 # Frontend (otra terminal)
@@ -167,39 +231,32 @@ cd backend
 
 ## Solución de problemas frecuentes
 
-### "python no se reconoce como un comando" (Windows)
+### El navegador abre pero sale "No se puede conectar" o pantalla en blanco (Docker)
 
-Python no está en el PATH. Dos opciones:
+El backend no arrancó correctamente. Revisa los logs:
 
-1. Reinstala Python desde https://www.python.org/downloads/ y marca **"Add Python to PATH"** durante la instalación.
-2. Busca en el menú inicio **"Editar las variables de entorno del sistema"** → Variables de entorno → PATH → agrega la carpeta donde instalaste Python (ej. `C:\Python312` y `C:\Python312\Scripts`).
+```bash
+docker compose logs backend
+```
 
-### El navegador abre pero sale "No se puede conectar" o pantalla en blanco
+Los errores más comunes:
 
-El backend no arrancó correctamente. Abre la ventana llamada **"Backend - Dashboard CEPLAN"** y lee el error. Los más comunes:
-
-- `Address already in use` → el puerto 8000 ya está ocupado. Cierra el proceso que lo usa o cambia el puerto en el script.
-- `ModuleNotFoundError` → borra la carpeta `backend/.venv` y vuelve a ejecutar `start.bat` / `start.sh`.
-
-### "npm no se reconoce" (Windows)
-
-Node.js no está en el PATH. Reinstala Node.js desde https://nodejs.org/ y reinicia la terminal.
+- `Address already in use` → el puerto 8080 ya está ocupado. Cambia el mapeo en `docker-compose.yml` a `"8081:80"`.
+- El healthcheck falla → espera 30 s y vuelve a intentar; si persiste, revisa los logs del backend.
 
 ### `start.sh: Permission denied` (Linux / macOS)
 
 ```bash
-chmod +x start.sh
-./start.sh
+chmod +x start.sh && ./start.sh
 ```
 
 ### El frontend arranca pero los datos no cargan (error CORS o "Network Error")
 
-Verifica que el backend esté corriendo en http://localhost:8000. Abre esa URL en el navegador: si ves `{"status":"ok",...}` el backend está bien. Si no carga, revisa la ventana del backend.
+En Docker, verifica que `ALLOWED_ORIGINS` en `.env` incluya el origen desde el que abres el navegador. Para desarrollo local debe ser `http://localhost:8080`.
 
-### Quiero reiniciar desde cero
+### Reiniciar desde cero (dev sin Docker)
 
 ```bash
-# Borra las dependencias instaladas y vuelve a ejecutar el script
-rm -rf backend/.venv frontend/node_modules   # Linux/macOS
-# Windows: borra manualmente backend\.venv y frontend\node_modules
+rm -rf backend/.venv frontend/node_modules
+./start.sh
 ```
