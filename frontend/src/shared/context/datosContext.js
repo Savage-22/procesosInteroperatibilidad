@@ -5,6 +5,7 @@ export const META_INICIAL = {
     ultimaCarga: null,
     modulosCargados: [],
     advertencias: [],
+    procesosEnRojo: 0,
 }
 
 export const DatosContext = createContext(META_INICIAL)

@@ -42,7 +42,7 @@ function NavLinks({ onNavigate }) {
 }
 
 export default function Navbar() {
-    const { ultimaCarga } = useDatos()
+    const { ultimaCarga, procesosEnRojo } = useDatos()
     const [isMenuAbierto, setIsMenuAbierto] = useState(false)
     const hora = formatearHora(ultimaCarga)
 
@@ -61,7 +61,15 @@ export default function Navbar() {
                     <div className="hidden md:flex items-center gap-1">
                         <NavLinks />
                         <BotonCargarExcel />
-                        <BotonPlantilla />
+                        {procesosEnRojo > 0 && (
+                            <span
+                                className="relative ml-2 flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#9c1d1d] text-white text-xs font-bold animate-pulse"
+                                title={`${procesosEnRojo} proceso${procesosEnRojo > 1 ? 's' : ''} en estado crítico`}
+                            >
+                                <span className="material-symbols-outlined text-sm">warning</span>
+                                {procesosEnRojo} crítico{procesosEnRojo > 1 ? 's' : ''}
+                            </span>
+                        )}
                         {hora && (
                             <span className="flex items-center gap-1 ml-3 text-xs text-white/50" title="Última actualización de datos">
                                 <span className="material-symbols-outlined text-sm">sync</span>
@@ -83,7 +91,12 @@ export default function Navbar() {
                     <div className="md:hidden pb-3 flex flex-col gap-1">
                         <NavLinks onNavigate={() => setIsMenuAbierto(false)} />
                         <BotonCargarExcel />
-                        <BotonPlantilla />
+                        {procesosEnRojo > 0 && (
+                            <span className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#9c1d1d]/80 text-white text-sm font-semibold animate-pulse mx-1">
+                                <span className="material-symbols-outlined text-base">warning</span>
+                                {procesosEnRojo} proceso{procesosEnRojo > 1 ? 's' : ''} en estado crítico
+                            </span>
+                        )}
                         {hora && (
                             <span className="flex items-center gap-1 px-3 py-1 text-xs text-white/50">
                                 <span className="material-symbols-outlined text-sm">sync</span>

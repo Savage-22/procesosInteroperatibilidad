@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from modules.dashboard.application.dashboard_service import DashboardService
 from modules.dashboard.http.dashboard_router import router as dashboard_router
 from modules.plantilla.plantilla_router import router as plantilla_router
 from modules.procesos.http.procesos_router import router as procesos_router
@@ -62,4 +63,6 @@ def health():
 
 @app.get("/api/meta")
 def meta():
-    return {"success": True, "data": ExcelStore.get_meta()}
+    data = ExcelStore.get_meta()
+    data["procesos_en_rojo"] = DashboardService.contar_procesos_rojo()
+    return {"success": True, "data": data}
