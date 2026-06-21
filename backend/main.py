@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from modules.dashboard.application.dashboard_service import DashboardService
 from modules.dashboard.http.dashboard_router import router as dashboard_router
+from modules.plantilla.plantilla_router import router as plantilla_router
 from modules.procesos.http.procesos_router import router as procesos_router
 from modules.procesos.infrastructure.excel_reader import ExcelStore
 
@@ -52,6 +53,7 @@ app.add_middleware(
 
 app.include_router(procesos_router)
 app.include_router(dashboard_router)
+app.include_router(plantilla_router)
 
 
 @app.get("/health")

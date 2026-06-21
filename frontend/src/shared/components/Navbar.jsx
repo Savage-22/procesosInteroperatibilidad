@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 
 import { useDatos } from '../hooks/useDatos'
 import BotonCargarExcel from './BotonCargarExcel'
+import BotonPlantilla from './BotonPlantilla'
 
 const LINKS = [
     { to: '/', label: 'Dashboard', icon: 'dashboard' },
