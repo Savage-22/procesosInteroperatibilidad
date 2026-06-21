@@ -61,6 +61,7 @@ export default function Navbar() {
                     <div className="hidden md:flex items-center gap-1">
                         <NavLinks />
                         <BotonCargarExcel />
+                        <BotonPlantilla />
                         {procesosEnRojo > 0 && (
                             <span
                                 className="relative ml-2 flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#9c1d1d] text-white text-xs font-bold animate-pulse"
@@ -91,6 +92,7 @@ export default function Navbar() {
                     <div className="md:hidden pb-3 flex flex-col gap-1">
                         <NavLinks onNavigate={() => setIsMenuAbierto(false)} />
                         <BotonCargarExcel />
+                        <BotonPlantilla />
                         {procesosEnRojo > 0 && (
                             <span className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#9c1d1d]/80 text-white text-sm font-semibold animate-pulse mx-1">
                                 <span className="material-symbols-outlined text-base">warning</span>
