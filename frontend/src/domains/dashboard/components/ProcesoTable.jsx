@@ -71,7 +71,11 @@ export default function ProcesoTable({ procesos, onRowClick }) {
                         <tr
                             key={p.codigo}
                             onClick={() => onRowClick(p.codigo)}
-                            className="hover:bg-[#f2f4f7] cursor-pointer transition-colors"
+                            className={`cursor-pointer transition-colors ${
+                                p.semaforo === 'Rojo'
+                                    ? 'bg-[#fff5f5] hover:bg-[#ffe8e8] border-l-4 border-l-[#9c1d1d]'
+                                    : 'hover:bg-[#f2f4f7]'
+                            }`}
                         >
                             <td className="px-4 py-3 font-mono font-semibold text-[#1e3654]">{p.codigo}</td>
                             <td className="px-4 py-3 text-gray-700 max-w-xs truncate">{p.proceso}</td>
