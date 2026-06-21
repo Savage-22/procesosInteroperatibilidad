@@ -78,8 +78,14 @@ export default function DashboardPage() {
 
             {/* Proceso más crítico */}
             {kpis.proceso_mas_critico && (
-                <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100 flex items-center gap-4">
-                    <span className="material-symbols-outlined text-3xl text-[#9c1d1d]">priority_high</span>
+                <div className={`rounded-xl shadow-sm p-5 flex items-center gap-4 border ${
+                    kpis.proceso_mas_critico.semaforo === 'Rojo'
+                        ? 'bg-[#ffe8e8] border-[#9c1d1d]/30 animate-pulse'
+                        : 'bg-white border-gray-100'
+                }`}>
+                    <span className={`material-symbols-outlined text-3xl ${
+                        kpis.proceso_mas_critico.semaforo === 'Rojo' ? 'text-[#9c1d1d]' : 'text-[#854d0e]'
+                    }`}>priority_high</span>
                     <div>
                         <p className="text-xs text-gray-500 uppercase tracking-wide">Proceso más crítico</p>
                         <p className="font-semibold text-[#1e3654]">

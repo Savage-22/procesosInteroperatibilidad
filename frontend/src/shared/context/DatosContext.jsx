@@ -19,6 +19,7 @@ export function DatosProvider({ children }) {
                         ultimaCarga: res.data.ultima_carga,
                         modulosCargados: res.data.modulos_cargados,
                         advertencias: res.data.advertencias,
+                        procesosEnRojo: res.data.procesos_en_rojo ?? 0,
                     },
             )
         } catch {

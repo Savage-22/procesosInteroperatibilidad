@@ -6,6 +6,19 @@ from shared.semaforo import calcular_semaforo
 class DashboardService:
 
     @staticmethod
+    def contar_procesos_rojo() -> int:
+        todos = ExcelStore.get_all()
+        por_codigo: dict[str, list[dict]] = {}
+        for r in todos:
+            por_codigo.setdefault(r["codigo_proceso"], []).append(r)
+        return sum(
+            1 for regs in por_codigo.values()
+            if calcular_semaforo(
+                ProcesoService.calcular_promedios(regs)["promedio_avance_t1"]
+            ) == "Rojo"
+        )
+
+    @staticmethod
     def obtener_kpis() -> dict:
         todos = ExcelStore.get_all()
 
