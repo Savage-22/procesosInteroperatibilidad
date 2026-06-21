@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 
 import { useDatos } from '../hooks/useDatos'
 import BotonCargarExcel from './BotonCargarExcel'
+import BotonPlantilla from './BotonPlantilla'
 
 const LINKS = [
     { to: '/', label: 'Dashboard', icon: 'dashboard' },
@@ -60,6 +61,7 @@ export default function Navbar() {
                     <div className="hidden md:flex items-center gap-1">
                         <NavLinks />
                         <BotonCargarExcel />
+                        <BotonPlantilla />
                         {hora && (
                             <span className="flex items-center gap-1 ml-3 text-xs text-white/50" title="Última actualización de datos">
                                 <span className="material-symbols-outlined text-sm">sync</span>
@@ -81,6 +83,7 @@ export default function Navbar() {
                     <div className="md:hidden pb-3 flex flex-col gap-1">
                         <NavLinks onNavigate={() => setIsMenuAbierto(false)} />
                         <BotonCargarExcel />
+                        <BotonPlantilla />
                         {hora && (
                             <span className="flex items-center gap-1 px-3 py-1 text-xs text-white/50">
                                 <span className="material-symbols-outlined text-sm">sync</span>
