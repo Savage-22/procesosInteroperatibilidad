@@ -11,6 +11,7 @@ const LINKS = [
     { to: '/pareto', label: 'Pareto', icon: 'bar_chart' },
     { to: '/predicciones', label: 'Predicciones', icon: 'insights' },
     { to: '/metodologia', label: 'Metodología', icon: 'menu_book' },
+    { to: '/objetivos',   label: 'Objetivos',   icon: 'flag' },
 ]
 
 function formatearHora(iso) {

@@ -90,6 +90,10 @@ def _mapear_columnas(fila) -> dict[str, int]:
             indices.setdefault("resultado_esperado", i)
         elif "obtenido" in h:
             indices.setdefault("resultado_obtenido", i)
+        elif "objetivo" in h:
+            indices.setdefault("objetivo_estrategico", i)
+        elif "accion" in h:
+            indices.setdefault("accion_estrategica", i)
     return indices
 
 
@@ -167,6 +171,8 @@ def _parsear_hoja(df_raw: pd.DataFrame, hoja: str) -> tuple[list[dict], list[str
             "codigo_proceso": codigo,
             "proceso": _str_o_vacio(valor(fila, "proceso")),
             "indicador": _str_o_vacio(valor(fila, "indicador")),
+            "objetivo_estrategico": _str_o_vacio(valor(fila, "objetivo_estrategico")),
+            "accion_estrategica": _str_o_vacio(valor(fila, "accion_estrategica")),
             "sentido": sentido or "Ascendente",
             "unidad": unidad,
             "meta_texto": _meta_texto(meta_final, unidad, es_descendente),

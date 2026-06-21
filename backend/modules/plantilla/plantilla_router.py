@@ -15,9 +15,11 @@ _VERDE_CLARO = "D1FADF"
 _ROJO_CLARO = "FFE8E8"
 
 _COLUMNAS = [
-    ("Codigo",             "Código del proceso. Patrón: M<módulo>.<número>  Ej: M1.1, M3.2"),
-    ("Proceso",            "Nombre descriptivo del proceso o servicio que se mide."),
-    ("Indicador",          "Descripción del indicador que mide el proceso."),
+    ("Codigo",                  "Código del proceso. Patrón: M<módulo>.<número>  Ej: M1.1, M3.2"),
+    ("Proceso",                 "Nombre descriptivo del proceso o servicio que se mide."),
+    ("Indicador",               "Descripción del indicador que mide el proceso."),
+    ("Objetivo Estrategico",    "(Opcional) Objetivo estratégico al que pertenece este proceso. Ej: OE1 — Mejorar atención al ciudadano"),
+    ("Accion Estrategica",      "(Opcional) Acción estratégica dentro del objetivo. Ej: A1.1 — Reducir tiempo de espera"),
     ("Relevancia",         "Importancia del indicador dentro del módulo: 1=Muy relevante  2=Relevante  3=Menos relevante"),
     ("Sentido",            "Dirección del indicador: Ascendente (mayor es mejor)  o  Descendente (menor es mejor, ej. tiempo de espera)."),
     ("Unidad",             "Unidad de medida del resultado. Ejemplos: %  días  horas  atenciones. Usar % o dejar vacío para porcentajes."),
@@ -32,22 +34,22 @@ _COLUMNAS = [
 
 _EJEMPLOS = [
     # Módulo M1 — Ascendente, porcentaje, con numerador/denominador
-    ("M1.1", "Atención oportuna de trámites",   "Porcentaje de trámites resueltos en plazo",       1, "Ascendente",   "%",    95,  2025, "Enero",      850,  1000, 80,  ""),
-    ("M1.1", "Atención oportuna de trámites",   "Porcentaje de trámites resueltos en plazo",       1, "Ascendente",   "%",    95,  2025, "Febrero",    900,  1000, 83,  ""),
-    ("M1.1", "Atención oportuna de trámites",   "Porcentaje de trámites resueltos en plazo",       1, "Ascendente",   "%",    95,  2025, "Marzo",      920,  1000, 86,  ""),
+    ("M1.1", "Atención oportuna de trámites",   "Porcentaje de trámites resueltos en plazo",       "OE1 — Mejorar atención al ciudadano", "A1.1 — Atención de trámites",   1, "Ascendente",   "%",    95,  2025, "Enero",   850,  1000, 80,  ""),
+    ("M1.1", "Atención oportuna de trámites",   "Porcentaje de trámites resueltos en plazo",       "OE1 — Mejorar atención al ciudadano", "A1.1 — Atención de trámites",   1, "Ascendente",   "%",    95,  2025, "Febrero", 900,  1000, 83,  ""),
+    ("M1.1", "Atención oportuna de trámites",   "Porcentaje de trámites resueltos en plazo",       "OE1 — Mejorar atención al ciudadano", "A1.1 — Atención de trámites",   1, "Ascendente",   "%",    95,  2025, "Marzo",   920,  1000, 86,  ""),
     # Módulo M2 — Descendente, días, sin numerador/denominador
-    ("M2.1", "Reducción de tiempo de espera",   "Tiempo promedio de espera del ciudadano (días)",  1, "Descendente",  "días", 20,  2025, "Enero",      "",   "",   22,  25),
-    ("M2.1", "Reducción de tiempo de espera",   "Tiempo promedio de espera del ciudadano (días)",  1, "Descendente",  "días", 20,  2025, "Febrero",    "",   "",   22,  24),
-    ("M2.1", "Reducción de tiempo de espera",   "Tiempo promedio de espera del ciudadano (días)",  1, "Descendente",  "días", 20,  2025, "Marzo",      "",   "",   21,  23),
+    ("M2.1", "Reducción de tiempo de espera",   "Tiempo promedio de espera del ciudadano (días)",  "OE1 — Mejorar atención al ciudadano", "A1.2 — Reducir tiempo de espera", 1, "Descendente", "días", 20,  2025, "Enero",   "",   "",   22,  25),
+    ("M2.1", "Reducción de tiempo de espera",   "Tiempo promedio de espera del ciudadano (días)",  "OE1 — Mejorar atención al ciudadano", "A1.2 — Reducir tiempo de espera", 1, "Descendente", "días", 20,  2025, "Febrero", "",   "",   22,  24),
+    ("M2.1", "Reducción de tiempo de espera",   "Tiempo promedio de espera del ciudadano (días)",  "OE1 — Mejorar atención al ciudadano", "A1.2 — Reducir tiempo de espera", 1, "Descendente", "días", 20,  2025, "Marzo",   "",   "",   21,  23),
     # Módulo M3 — Ascendente, dos indicadores (relevancia 1 y 2)
-    ("M3.1", "Mejora en calidad del servicio",  "Índice de satisfacción ciudadana (%)",            1, "Ascendente",   "%",    85,  2025, "Enero",      170,  200,  70,  ""),
-    ("M3.1", "Mejora en calidad del servicio",  "Índice de satisfacción ciudadana (%)",            1, "Ascendente",   "%",    85,  2025, "Febrero",    178,  200,  73,  ""),
-    ("M3.2", "Mejora en calidad del servicio",  "Porcentaje de reclamos resueltos (%)",            2, "Ascendente",   "%",    90,  2025, "Enero",      108,  120,  88,  ""),
-    ("M3.2", "Mejora en calidad del servicio",  "Porcentaje de reclamos resueltos (%)",            2, "Ascendente",   "%",    90,  2025, "Febrero",    112,  120,  89,  ""),
+    ("M3.1", "Mejora en calidad del servicio",  "Índice de satisfacción ciudadana (%)",            "OE2 — Fortalecer calidad",            "A2.1 — Satisfacción ciudadana",  1, "Ascendente",   "%",    85,  2025, "Enero",   170,  200,  70,  ""),
+    ("M3.1", "Mejora en calidad del servicio",  "Índice de satisfacción ciudadana (%)",            "OE2 — Fortalecer calidad",            "A2.1 — Satisfacción ciudadana",  1, "Ascendente",   "%",    85,  2025, "Febrero", 178,  200,  73,  ""),
+    ("M3.2", "Mejora en calidad del servicio",  "Porcentaje de reclamos resueltos (%)",            "OE2 — Fortalecer calidad",            "A2.1 — Satisfacción ciudadana",  2, "Ascendente",   "%",    90,  2025, "Enero",   108,  120,  88,  ""),
+    ("M3.2", "Mejora en calidad del servicio",  "Porcentaje de reclamos resueltos (%)",            "OE2 — Fortalecer calidad",            "A2.1 — Satisfacción ciudadana",  2, "Ascendente",   "%",    90,  2025, "Febrero", 112,  120,  89,  ""),
     # Módulo M4 — Ascendente, porcentaje de implementación
-    ("M4.1", "Implementación del plan operativo", "Porcentaje de actividades implementadas (%)",   1, "Ascendente",   "%",    100, 2025, "Enero",      60,   100,  75,  ""),
-    ("M4.1", "Implementación del plan operativo", "Porcentaje de actividades implementadas (%)",   1, "Ascendente",   "%",    100, 2025, "Febrero",    70,   100,  78,  ""),
-    ("M4.1", "Implementación del plan operativo", "Porcentaje de actividades implementadas (%)",   1, "Ascendente",   "%",    100, 2025, "Marzo",      82,   100,  82,  ""),
+    ("M4.1", "Implementación del plan operativo", "Porcentaje de actividades implementadas (%)",   "OE2 — Fortalecer calidad",            "A2.2 — Plan operativo",          1, "Ascendente",   "%",    100, 2025, "Enero",   60,   100,  75,  ""),
+    ("M4.1", "Implementación del plan operativo", "Porcentaje de actividades implementadas (%)",   "OE2 — Fortalecer calidad",            "A2.2 — Plan operativo",          1, "Ascendente",   "%",    100, 2025, "Febrero", 70,   100,  78,  ""),
+    ("M4.1", "Implementación del plan operativo", "Porcentaje de actividades implementadas (%)",   "OE2 — Fortalecer calidad",            "A2.2 — Plan operativo",          1, "Ascendente",   "%",    100, 2025, "Marzo",   82,   100,  82,  ""),
 ]
 
 _ENCABEZADOS = [c[0] for c in _COLUMNAS]
@@ -96,7 +98,7 @@ def _hoja_datos(wb: Workbook) -> None:
         cell.alignment = alin_izq
 
     # — Anchos de columna —
-    anchos = [10, 32, 38, 11, 13, 8, 12, 6, 13, 13, 13, 18, 18]
+    anchos = [10, 32, 38, 30, 28, 11, 13, 8, 12, 6, 13, 13, 13, 18, 18]
     for i, ancho in enumerate(anchos, start=1):
         ws.column_dimensions[get_column_letter(i)].width = ancho
 
