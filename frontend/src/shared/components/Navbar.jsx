@@ -54,8 +54,8 @@ export default function Navbar() {
                     <div className="flex items-center gap-2">
                         <span className="material-symbols-outlined text-[#f4d100] text-2xl">monitoring</span>
                         <div>
-                            <p className="text-white font-bold text-sm leading-tight">Dashboard CEPLAN</p>
-                            <p className="text-[#f4d100] text-xs leading-tight">Directiva N° 0056-2024</p>
+                            <p className="text-white font-bold text-sm leading-tight">SIIP</p>
+                            <p className="text-[#f4d100] text-xs leading-tight">Interoperabilidad · CEPLAN N° 0056-2024</p>
                         </div>
                     </div>
 

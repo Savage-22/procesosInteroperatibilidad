@@ -1,6 +1,6 @@
-# Dashboard CEPLAN — Ingeniería de Procesos (Interoperabilidad)
+# SIIP — Sistema Inteligente de Interoperabilidad de Procesos
 
-Aplicación web para el seguimiento y evaluación de procesos según la **Directiva CEPLAN N° 0056-2024**. Lee los datos mensuales de los módulos M1, M2, M3 y M4 desde un archivo Excel y los presenta en un dashboard con semáforos, comparativas y análisis de Pareto.
+Plataforma web con **Asistente IA integrado** para el seguimiento, evaluación y orientación en el cumplimiento de la **Directiva CEPLAN N° 0056-2024** sobre interoperabilidad de servicios públicos. Lee los datos mensuales de los módulos M1, M2, M3 y M4 desde un archivo Excel y los presenta con semáforos, comparativas, análisis de Pareto y recomendaciones generadas por inteligencia artificial.
 
 ## Inicio rápido (Docker — recomendado)
 

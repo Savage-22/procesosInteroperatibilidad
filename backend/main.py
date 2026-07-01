@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from modules.chat.chat_router import router as chat_router
 from modules.dashboard.application.dashboard_service import DashboardService
 from modules.dashboard.http.dashboard_router import router as dashboard_router
 from modules.objetivos.objetivos_router import router as objetivos_router
@@ -42,7 +43,7 @@ async def lifespan(app: FastAPI):
     vigilante.cancel()
 
 
-app = FastAPI(title="Dashboard CEPLAN", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="SIIP — Sistema Inteligente de Interoperabilidad de Procesos", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -56,6 +57,7 @@ app.include_router(procesos_router)
 app.include_router(dashboard_router)
 app.include_router(plantilla_router)
 app.include_router(objetivos_router)
+app.include_router(chat_router)
 
 
 @app.get("/health")

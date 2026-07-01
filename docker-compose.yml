@@ -9,6 +9,7 @@ services:
     environment:
       EXCEL_PATH: /data/datos_estandarizados.xlsx
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
     volumes:
       - excel_data:/data
     healthcheck:

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 
+import ChatWidget from './shared/components/ChatWidget'
 import ErrorBoundary from './shared/components/ErrorBoundary'
 import Navbar from './shared/components/Navbar'
 import BannerAdvertencias from './shared/components/BannerAdvertencias'
@@ -33,6 +34,7 @@ export default function App() {
                                 <Route path="*" element={<NotFoundPage />} />
                             </Routes>
                         </main>
+                        <ChatWidget />
                     </div>
                 </BrowserRouter>
             </DatosProvider>
