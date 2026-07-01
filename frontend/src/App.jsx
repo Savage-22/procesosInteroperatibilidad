@@ -7,6 +7,7 @@ import BannerAdvertencias from './shared/components/BannerAdvertencias'
 import NotFoundPage from './shared/components/NotFoundPage'
 import { DatosProvider } from './shared/context/DatosContext'
 import DashboardPage from './domains/dashboard/pages/DashboardPage'
+import HojaDeRutaPage from './domains/hojaruta/pages/HojaDeRutaPage'
 import ProcesoDetallePage from './domains/procesos/pages/ProcesoDetallePage'
 import ComparativaPage from './domains/comparativa/pages/ComparativaPage'
 import ParetoPage from './domains/pareto/pages/ParetoPage'
@@ -31,6 +32,7 @@ export default function App() {
                                 <Route path="/predicciones" element={<PrediccionesPage />} />
                                 <Route path="/metodologia" element={<MetodologiaPage />} />
                                 <Route path="/objetivos" element={<ObjetivosPage />} />
+                                <Route path="/hoja-de-ruta" element={<HojaDeRutaPage />} />
                                 <Route path="*" element={<NotFoundPage />} />
                             </Routes>
                         </main>
