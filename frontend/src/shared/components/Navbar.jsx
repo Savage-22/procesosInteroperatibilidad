@@ -5,14 +5,15 @@ import { useDatos } from '../hooks/useDatos'
 import BotonCargarExcel from './BotonCargarExcel'
 import BotonPlantilla from './BotonPlantilla'
 
+// label: texto en móvil — short: texto en desktop (más corto para que quepa)
 const LINKS = [
-    { to: '/',             label: 'Dashboard',    icon: 'dashboard'      },
-    { to: '/hoja-de-ruta', label: 'Hoja de Ruta', icon: 'route'          },
-    { to: '/objetivos',    label: 'Objetivos',    icon: 'flag'           },
-    { to: '/comparativa',  label: 'Comparativa',  icon: 'compare_arrows' },
-    { to: '/pareto',       label: 'Pareto',       icon: 'bar_chart'      },
-    { to: '/predicciones', label: 'Predicciones', icon: 'insights'       },
-    { to: '/metodologia',  label: 'Metodología',  icon: 'menu_book'      },
+    { to: '/',             label: 'Dashboard',    short: 'Dashboard',  icon: 'dashboard'      },
+    { to: '/hoja-de-ruta', label: 'Hoja de Ruta', short: 'Guía',       icon: 'route'          },
+    { to: '/objetivos',    label: 'Objetivos',    short: 'Objetivos',  icon: 'flag'           },
+    { to: '/comparativa',  label: 'Comparativa',  short: 'Comparativa',icon: 'compare_arrows' },
+    { to: '/pareto',       label: 'Pareto',        short: 'Pareto',     icon: 'bar_chart'      },
+    { to: '/predicciones', label: 'Predicciones', short: 'Predicción', icon: 'insights'       },
+    { to: '/metodologia',  label: 'Metodología',  short: 'Metodología',icon: 'menu_book'      },
 ]
 
 function formatearHora(iso) {
@@ -22,23 +23,24 @@ function formatearHora(iso) {
     return fecha.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
 }
 
-/* ── Desktop: solo icono + tooltip ─────────────────────────────── */
+/* ── Desktop: icono + label corto ──────────────────────────────── */
 function NavLinksDesktop() {
-    return LINKS.map(({ to, label, icon }) => (
+    return LINKS.map(({ to, label, short, icon }) => (
         <NavLink
             key={to}
             to={to}
             end={to === '/'}
             title={label}
             className={({ isActive }) =>
-                `flex items-center justify-center w-9 h-9 rounded-lg transition-colors ${
+                `flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                     isActive
                         ? 'bg-[#f4d100] text-[#1e3654]'
-                        : 'text-white/70 hover:text-white hover:bg-white/10'
+                        : 'text-white/80 hover:text-white hover:bg-white/10'
                 }`
             }
         >
-            <span className="material-symbols-outlined text-[1.15rem]">{icon}</span>
+            <span className="material-symbols-outlined text-base">{icon}</span>
+            {short}
         </NavLink>
     ))
 }
@@ -93,11 +95,8 @@ export default function Navbar() {
                     </div>
 
                     {/* Links + acciones — desktop */}
-                    <div className="hidden lg:flex items-center gap-1 flex-1 justify-center">
+                    <div className="hidden lg:flex items-center gap-0.5 flex-1 justify-center">
                         <NavLinksDesktop />
-
-                        <span className="w-px h-5 bg-white/20 mx-1" />
-
                         <BotonCargarExcel iconOnly />
                         <BotonPlantilla iconOnly />
                     </div>
