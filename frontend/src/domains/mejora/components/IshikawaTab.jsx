@@ -9,6 +9,14 @@ const ICONO_6M = {
     'Método': 'account_tree', 'Personas': 'group', 'Entorno': 'public',
     'Medición': 'straighten', 'Máquina-TI': 'memory', 'Materiales': 'inventory_2',
 }
+const DESC_6M = {
+    'Método': 'Forma de trabajar: procedimientos, políticas, flujos y reglas del proceso.',
+    'Personas': 'Equipo humano: competencias, capacitación, carga de trabajo y comunicación.',
+    'Entorno': 'Condiciones externas: normativa, cultura organizacional y espacio de trabajo.',
+    'Medición': 'Datos e indicadores: qué se mide, cómo se mide y calidad de la información.',
+    'Máquina-TI': 'Tecnología: equipos, sistemas y herramientas que dan soporte al proceso.',
+    'Materiales': 'Insumos y recursos: documentos, formatos y materiales necesarios para ejecutar.',
+}
 const INP = 'w-full px-2 py-1.5 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3654]/20'
 
 function ParetoCausas({ pareto }) {
@@ -48,10 +56,11 @@ function CategoriaCard({ categoria, causas, onAgregar, onToggleRaiz, onEliminar 
 
     return (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-            <h4 className="flex items-center gap-1.5 text-sm font-bold text-[#1e3654] mb-2">
+            <h4 className="flex items-center gap-1.5 text-sm font-bold text-[#1e3654]">
                 <span className="material-symbols-outlined text-base text-gray-400">{ICONO_6M[categoria]}</span>
                 {categoria}
             </h4>
+            <p className="text-xs text-gray-400 mb-2 mt-0.5">{DESC_6M[categoria]}</p>
             <ul className="space-y-1 mb-2 min-h-[24px]">
                 {causas.map((c) => (
                     <li key={c.id} className="flex items-center gap-1 text-sm text-gray-700 group">
@@ -61,9 +70,9 @@ function CategoriaCard({ categoria, causas, onAgregar, onToggleRaiz, onEliminar 
                             </span>
                         </button>
                         <span className="flex-1">{c.descripcion}</span>
-                        <span className="text-xs text-gray-400">{c.peso}</span>
-                        <button onClick={() => onEliminar(c)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-[#9c1d1d]">
-                            <span className="material-symbols-outlined text-sm">close</span>
+                        <span className="text-xs text-gray-400" title="Peso (frecuencia o impacto)">{c.peso}</span>
+                        <button onClick={() => onEliminar(c)} title="Eliminar causa" className="text-gray-300 hover:text-[#9c1d1d]">
+                            <span className="material-symbols-outlined text-base">delete</span>
                         </button>
                     </li>
                 ))}
@@ -94,7 +103,10 @@ export default function IshikawaTab({ codigo }) {
 
     async function agregar(datosCausa) { await guardarCausa(codigo, datosCausa); await cargar() }
     async function toggleRaiz(c) { await guardarCausa(codigo, { es_raiz: !c.es_raiz }, c.id); await cargar() }
-    async function eliminar(c) { await borrarCausa(c.id); await cargar() }
+    async function eliminar(c) {
+        if (!window.confirm(`¿Eliminar la causa "${c.descripcion}"?`)) return
+        await borrarCausa(c.id); await cargar()
+    }
 
     if (error) return <div className="flex items-center gap-2 p-4 bg-[#ffe8e8] text-[#9c1d1d] rounded-xl text-sm"><span className="material-symbols-outlined">error</span>{error}</div>
     if (!datos) return <p className="text-gray-400 text-sm">Cargando…</p>
