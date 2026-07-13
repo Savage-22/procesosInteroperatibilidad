@@ -87,6 +87,13 @@ export default function ProcesoDetallePage() {
                                     <span className="material-symbols-outlined text-sm">description</span>
                                     Ficha (Anexo 2)
                                 </button>
+                                <button
+                                    onClick={() => navigate(`/proceso/${proceso.codigo}/indicadores`)}
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-[#1e3654] bg-[#f2f4f7] hover:bg-gray-200"
+                                >
+                                    <span className="material-symbols-outlined text-sm">insights</span>
+                                    Indicadores (Anexo 4)
+                                </button>
                             </div>
                         </div>
                         <div className="text-right shrink-0">
