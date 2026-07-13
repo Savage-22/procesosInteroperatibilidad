@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from modules.chat.chat_router import router as chat_router
 from modules.dashboard.application.dashboard_service import DashboardService
 from modules.dashboard.http.dashboard_router import router as dashboard_router
+from modules.fichas.infrastructure.database import init_db
 from modules.objetivos.objetivos_router import router as objetivos_router
 from modules.plantilla.plantilla_router import router as plantilla_router
 from modules.procesos.http.procesos_router import router as procesos_router
@@ -36,6 +37,9 @@ async def _vigilar_excel():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Crea el esquema de la BD (fichas) si no existe; el Excel se mantiene como
+    # fuente de solo lectura y vía de importación
+    init_db()
     excel_path = os.getenv("EXCEL_PATH", "../datos_estandarizados.xlsx")
     ExcelStore.cargar(excel_path)
     vigilante = asyncio.create_task(_vigilar_excel())
