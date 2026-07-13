@@ -154,3 +154,69 @@ class Medicion(SQLModel, table=True):
     actualizado_en: datetime = Field(default_factory=_ahora)
 
     indicador: FichaIndicador = Relationship(back_populates="mediciones")
+
+
+# --------------------------------------------------------------------------- #
+# Mejora I — Causa raíz (Ishikawa 6M) — N a 1 con Proceso                      #
+# --------------------------------------------------------------------------- #
+
+class Causa(SQLModel, table=True):
+    __tablename__ = "causa"
+
+    id: int | None = Field(default=None, primary_key=True)
+    proceso_id: int = Field(foreign_key="proceso.id", index=True)
+
+    # Categoría 6M: Método | Personas | Entorno | Medición | Máquina-TI | Materiales
+    categoria: str
+    descripcion: str
+    es_raiz: bool = Field(default=False)
+    peso: float = Field(default=1.0)          # frecuencia/impacto para el Pareto
+    activo: bool = Field(default=True)
+    creado_en: datetime = Field(default_factory=_ahora)
+    actualizado_en: datetime = Field(default_factory=_ahora)
+
+
+# --------------------------------------------------------------------------- #
+# Mejora II — Oportunidad de mejora (F = C × I) — N a 1 con Proceso            #
+# --------------------------------------------------------------------------- #
+
+class Oportunidad(SQLModel, table=True):
+    __tablename__ = "oportunidad"
+
+    id: int | None = Field(default=None, primary_key=True)
+    proceso_id: int = Field(foreign_key="proceso.id", index=True)
+    causa_id: int | None = Field(default=None, foreign_key="causa.id")
+
+    tipo: str | None = None
+    descripcion: str
+    accion_propuesta: str | None = None
+
+    # Escalas cualitativas 1–5 de la ficha de mejora
+    costo: int = Field(default=1)             # C
+    impacto: int = Field(default=1)           # I
+    probabilidad: int = Field(default=1)
+    consecuencia: int = Field(default=1)
+
+    estrategia: str | None = None             # evitar | mitigar | transferir | aceptar
+    estado: str = Field(default="propuesta")  # propuesta | en_curso | implementada | descartada
+    activo: bool = Field(default=True)
+    creado_en: datetime = Field(default_factory=_ahora)
+    actualizado_en: datetime = Field(default_factory=_ahora)
+
+
+# --------------------------------------------------------------------------- #
+# Mejora III — Proyección Antes/Después — 1 a 1 con un indicador               #
+# --------------------------------------------------------------------------- #
+
+class Proyeccion(SQLModel, table=True):
+    __tablename__ = "proyeccion"
+
+    id: int | None = Field(default=None, primary_key=True)
+    indicador_id: int = Field(foreign_key="ficha_indicador.id", unique=True, index=True)
+    oportunidad_id: int | None = Field(default=None, foreign_key="oportunidad.id")
+
+    # Meses proyectados tras aplicar la mejora: [{"mes": "Julio", "anio": 2025, "valor": 92}]
+    meses: list[dict] = Field(default_factory=list, sa_column=Column(JSON))
+    nota: str | None = None
+    creado_en: datetime = Field(default_factory=_ahora)
+    actualizado_en: datetime = Field(default_factory=_ahora)
