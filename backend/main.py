@@ -14,6 +14,7 @@ from modules.fichas.application.sincronizador import Sincronizador
 from modules.fichas.http.ficha_proceso_router import router as ficha_proceso_router
 from modules.fichas.http.indicador_router import router as indicador_router
 from modules.fichas.http.inventario_router import router as inventario_router
+from modules.fichas.http.organizacion_router import router as organizacion_router
 from modules.fichas.infrastructure.database import init_db
 from modules.objetivos.objetivos_router import router as objetivos_router
 from modules.plantilla.plantilla_router import router as plantilla_router
@@ -70,6 +71,7 @@ app.include_router(chat_router)
 app.include_router(inventario_router)
 app.include_router(ficha_proceso_router)
 app.include_router(indicador_router)
+app.include_router(organizacion_router)
 
 
 @app.get("/health")

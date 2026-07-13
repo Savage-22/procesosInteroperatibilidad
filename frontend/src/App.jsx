@@ -17,6 +17,7 @@ import ObjetivosPage from './domains/objetivos/pages/ObjetivosPage'
 import InventarioPage from './domains/inventario/pages/InventarioPage'
 import FichaProcesoPage from './domains/fichas/pages/FichaProcesoPage'
 import IndicadoresPage from './domains/fichas/pages/IndicadoresPage'
+import OnboardingPage from './domains/onboarding/pages/OnboardingPage'
 
 export default function App() {
     return (
@@ -35,6 +36,7 @@ export default function App() {
                                 <Route path="/predicciones" element={<PrediccionesPage />} />
                                 <Route path="/metodologia" element={<MetodologiaPage />} />
                                 <Route path="/objetivos" element={<ObjetivosPage />} />
+                                <Route path="/onboarding" element={<OnboardingPage />} />
                                 <Route path="/inventario" element={<InventarioPage />} />
                                 <Route path="/proceso/:codigo/ficha" element={<FichaProcesoPage />} />
                                 <Route path="/proceso/:codigo/indicadores" element={<IndicadoresPage />} />

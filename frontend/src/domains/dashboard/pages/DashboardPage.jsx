@@ -54,9 +54,25 @@ export default function DashboardPage() {
     const { kpis, procesos } = datos
 
     if (procesos.length === 0) return (
-        <div className="flex flex-col items-center justify-center h-64 gap-2 text-gray-500">
-            <span className="material-symbols-outlined text-4xl">database_off</span>
-            <p>No hay datos cargados. Verifica el archivo Excel del servidor.</p>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-10 text-center space-y-4 max-w-xl mx-auto mt-8">
+            <span className="material-symbols-outlined text-5xl text-gray-300">rocket_launch</span>
+            <div>
+                <p className="font-semibold text-[#1e3654]">Aún no tienes datos que mostrar</p>
+                <p className="text-sm text-gray-500 max-w-md mx-auto mt-1">
+                    Arma tu inventario, fichas e indicadores con el asistente guiado —sin tocar Excel—
+                    y tu dashboard quedará operativo. ¿Ya conoces el tema? Usa el modo experto.
+                </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+                <button onClick={() => navigate('/onboarding')} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-[#1e3654] text-white hover:bg-[#0c2f56]">
+                    <span className="material-symbols-outlined text-base">rocket_launch</span>
+                    Empezar de 0
+                </button>
+                <button onClick={() => navigate('/inventario')} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-[#1e3654] border border-gray-200 hover:bg-gray-50">
+                    <span className="material-symbols-outlined text-base">bolt</span>
+                    Modo experto
+                </button>
+            </div>
         </div>
     )
 
