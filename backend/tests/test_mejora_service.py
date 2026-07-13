@@ -1,6 +1,8 @@
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
+from modules.fichas.application.alertas_service import AlertasMejoraService
+from modules.fichas.application.cambio_service import CambioService
 from modules.fichas.application.causa_service import CausaService
 from modules.fichas.application.comparacion_service import ComparacionService
 from modules.fichas.application.errores import ErrorValidacion
@@ -140,3 +142,83 @@ def test_sugerir_proyeccion_rampa_hacia_meta(session, proceso):
     assert meses[0]["mes"] == "Julio"
     assert meses[-1]["mes"] == "Diciembre"
     assert meses[-1]["valor"] == 90.0     # llega a la meta en diciembre
+
+
+# ── #63 Gestión del cambio (Kurt Lewin) ───────────────────────────────────────
+
+def test_crear_accion_cambio_etapa_invalida_falla(session, proceso):
+    with pytest.raises(ErrorValidacion, match="Etapa"):
+        CambioService.crear(session, "M3.1", {"etapa": "otra", "descripcion": "x"})
+
+
+def test_cambio_agrupa_por_etapa_lewin(session, proceso):
+    CambioService.crear(session, "M3.1", {"etapa": "descongelar", "descripcion": "Comunicar necesidad"})
+    CambioService.crear(session, "M3.1", {"etapa": "cambiar", "descripcion": "Automatizar registro"})
+    data = CambioService.listar(session, "M3.1")
+    assert data["etapas"] == ["descongelar", "cambiar", "recongelar"]
+    assert len(data["acciones"]["descongelar"]) == 1
+    assert len(data["acciones"]["cambiar"]) == 1
+    assert data["acciones"]["recongelar"] == []
+
+
+def test_cambio_calcula_progreso(session, proceso):
+    a1 = CambioService.crear(session, "M3.1", {"etapa": "cambiar", "descripcion": "A"})
+    CambioService.crear(session, "M3.1", {"etapa": "cambiar", "descripcion": "B"})
+    CambioService.actualizar(session, a1["id"], {"estado": "hecho"})
+    prog = CambioService.listar(session, "M3.1")["progreso"]
+    assert prog["total"] == 2
+    assert prog["hechas"] == 1
+    assert prog["porcentaje"] == 50.0
+
+
+def test_cambio_estado_invalido_falla(session, proceso):
+    with pytest.raises(ErrorValidacion, match="Estado"):
+        CambioService.crear(session, "M3.1", {"etapa": "cambiar", "descripcion": "A", "estado": "raro"})
+
+
+def test_cambio_eliminar_es_soft_delete(session, proceso):
+    a = CambioService.crear(session, "M3.1", {"etapa": "recongelar", "descripcion": "Estandarizar"})
+    CambioService.eliminar(session, a["id"])
+    assert CambioService.listar(session, "M3.1")["acciones"]["recongelar"] == []
+
+
+# ── #65 Alertas autónomas de mejora ───────────────────────────────────────────
+
+def _proceso_con_avance(session, codigo, obtenido, meta=90):
+    InventarioService.crear(session, {"codigo": codigo, "nombre": f"Proc {codigo}"})
+    ind = IndicadorService.crear(session, codigo, {"nombre": "% x", "sentido": "Ascendente", "unidad": "%", "meta_final": meta})
+    IndicadorService.guardar_medicion(session, ind["id"], {"mes": "Junio", "numerador": obtenido, "denominador": 100, "resultado_esperado": meta})
+    return ind
+
+
+def test_alerta_proceso_en_rojo_aparece_como_critico(session, proceso):
+    _proceso_con_avance(session, "M3.2", obtenido=50)   # avance 55.5% → Rojo
+    data = AlertasMejoraService.evaluar(session)
+    codigos = [a["codigo"] for a in data["alertas"]]
+    assert "M3.2" in codigos
+    alerta = next(a for a in data["alertas"] if a["codigo"] == "M3.2")
+    assert alerta["nivel"] == "critico"
+    assert alerta["rojos"] == 1
+    assert data["resumen"]["criticos"] >= 1
+
+
+def test_alerta_proceso_todo_verde_no_aparece(session, proceso):
+    _proceso_con_avance(session, "M3.3", obtenido=95)   # avance 100% → Verde
+    data = AlertasMejoraService.evaluar(session)
+    assert "M3.3" not in [a["codigo"] for a in data["alertas"]]
+
+
+def test_alertas_ordenadas_por_urgencia(session, proceso):
+    _proceso_con_avance(session, "M3.4", obtenido=80)   # ámbar (atención)
+    _proceso_con_avance(session, "M3.5", obtenido=40)   # rojo (crítico, mayor puntaje)
+    data = AlertasMejoraService.evaluar(session)
+    codigos = [a["codigo"] for a in data["alertas"]]
+    assert codigos.index("M3.5") < codigos.index("M3.4")
+
+
+def test_alerta_sugiere_ishikawa_si_no_hay_diagnostico(session, proceso):
+    _proceso_con_avance(session, "M3.6", obtenido=50)
+    data = AlertasMejoraService.evaluar(session)
+    alerta = next(a for a in data["alertas"] if a["codigo"] == "M3.6")
+    assert alerta["sugerencia"]["tab"] == "ishikawa"
+    assert "sin análisis de mejora registrado" in alerta["motivos"]

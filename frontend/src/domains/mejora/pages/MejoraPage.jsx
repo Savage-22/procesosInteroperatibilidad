@@ -1,20 +1,24 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 
 import IshikawaTab from '../components/IshikawaTab'
 import OportunidadesTab from '../components/OportunidadesTab'
 import ComparacionTab from '../components/ComparacionTab'
+import CambioTab from '../components/CambioTab'
 
 const TABS = [
     { id: 'ishikawa', label: 'Diagnóstico (Ishikawa)', icon: 'lan' },
     { id: 'oportunidades', label: 'Oportunidades (F=C×I)', icon: 'lightbulb' },
     { id: 'comparacion', label: 'Antes / Después', icon: 'compare_arrows' },
+    { id: 'cambio', label: 'Gestión del cambio (Lewin)', icon: 'change_circle' },
 ]
 
 export default function MejoraPage() {
     const { codigo } = useParams()
     const navigate = useNavigate()
-    const [tab, setTab] = useState('ishikawa')
+    const [searchParams] = useSearchParams()
+    const tabInicial = TABS.some((t) => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'ishikawa'
+    const [tab, setTab] = useState(tabInicial)
 
     return (
         <div className="space-y-6">
@@ -44,6 +48,7 @@ export default function MejoraPage() {
             {tab === 'ishikawa' && <IshikawaTab codigo={codigo} />}
             {tab === 'oportunidades' && <OportunidadesTab codigo={codigo} />}
             {tab === 'comparacion' && <ComparacionTab codigo={codigo} />}
+            {tab === 'cambio' && <CambioTab codigo={codigo} />}
         </div>
     )
 }

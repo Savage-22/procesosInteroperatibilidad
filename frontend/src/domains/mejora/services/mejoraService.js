@@ -16,6 +16,14 @@ export async function obtenerComparacion(codigo) { return (await api.getComparac
 export async function guardarProyeccion(indicadorId, datos) { return (await api.guardarProyeccion(indicadorId, datos)).data }
 export async function sugerirProyeccion(indicadorId) { return (await api.sugerirProyeccion(indicadorId)).data }
 
+export async function obtenerAlertas() { return (await api.getAlertas()).data }
+
+export async function obtenerCambio(codigo) { return (await api.getCambio(codigo)).data }
+export async function guardarAccionCambio(codigo, datos, id = null) {
+    return (id ? await api.actualizarAccionCambio(id, datos) : await api.crearAccionCambio(codigo, datos)).data
+}
+export async function borrarAccionCambio(id) { return api.eliminarAccionCambio(id) }
+
 export function getErrorMessage(error) {
     if (error.response?.data?.detail) return error.response.data.detail
     return 'No se pudo completar la operación. Verifica que el servidor esté activo.'
