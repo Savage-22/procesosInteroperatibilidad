@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 
 import IshikawaTab from '../components/IshikawaTab'
 import OportunidadesTab from '../components/OportunidadesTab'
@@ -16,7 +16,9 @@ const TABS = [
 export default function MejoraPage() {
     const { codigo } = useParams()
     const navigate = useNavigate()
-    const [tab, setTab] = useState('ishikawa')
+    const [searchParams] = useSearchParams()
+    const tabInicial = TABS.some((t) => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'ishikawa'
+    const [tab, setTab] = useState(tabInicial)
 
     return (
         <div className="space-y-6">

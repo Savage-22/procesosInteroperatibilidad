@@ -39,6 +39,11 @@ export async function sugerirProyeccion(indicadorId) {
     return (await httpClient.get(`/api/indicadores/${indicadorId}/proyeccion/sugerir`)).data
 }
 
+// ── Alertas autónomas de mejora ───────────────────────────────────
+export async function getAlertas() {
+    return (await httpClient.get('/api/mejora/alertas')).data
+}
+
 // ── Gestión del cambio (Kurt Lewin) ───────────────────────────────
 export async function getCambio(codigo) {
     return (await httpClient.get(`/api/procesos/${codigo}/cambio`)).data

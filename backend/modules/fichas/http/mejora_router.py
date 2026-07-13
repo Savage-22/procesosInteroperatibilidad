@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session
 
+from modules.fichas.application.alertas_service import AlertasMejoraService
 from modules.fichas.application.cambio_service import (
     ESTADOS_CAMBIO,
     ETAPAS,
@@ -52,6 +53,12 @@ def categorias_6m():
             "estados_cambio": ESTADOS_CAMBIO,
         },
     }
+
+
+@router.get("/mejora/alertas")
+def alertas_mejora(session: Session = Depends(get_session)):
+    """Procesos que deberían implementar mejoras, priorizados de forma autónoma."""
+    return {"success": True, "data": _manejar(lambda: AlertasMejoraService.evaluar(session))}
 
 
 @router.get("/procesos/{codigo}/causas")

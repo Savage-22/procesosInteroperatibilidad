@@ -7,6 +7,7 @@ import KpiCard from '../components/KpiCard'
 import ResumenGestion from '../components/ResumenGestion'
 import SemaforoBarChart from '../components/SemaforoBarChart'
 import ProcesoTable from '../components/ProcesoTable'
+import AlertasMejora from '../../mejora/components/AlertasMejora'
 import { getDashboardData, getDashboardErrorMessage } from '../services/dashboardService'
 
 export default function DashboardPage() {
@@ -115,6 +116,9 @@ export default function DashboardPage() {
                     </div>
                 </div>
             )}
+
+            {/* Alertas autónomas de mejora */}
+            <AlertasMejora />
 
             {/* Resumen institucional */}
             <ResumenGestion resumen={kpis.resumen_institucional} />
