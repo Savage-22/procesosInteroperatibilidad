@@ -18,6 +18,7 @@ import InventarioPage from './domains/inventario/pages/InventarioPage'
 import FichaProcesoPage from './domains/fichas/pages/FichaProcesoPage'
 import IndicadoresPage from './domains/fichas/pages/IndicadoresPage'
 import OnboardingPage from './domains/onboarding/pages/OnboardingPage'
+import MejoraPage from './domains/mejora/pages/MejoraPage'
 
 export default function App() {
     return (
@@ -40,6 +41,7 @@ export default function App() {
                                 <Route path="/inventario" element={<InventarioPage />} />
                                 <Route path="/proceso/:codigo/ficha" element={<FichaProcesoPage />} />
                                 <Route path="/proceso/:codigo/indicadores" element={<IndicadoresPage />} />
+                                <Route path="/proceso/:codigo/mejora" element={<MejoraPage />} />
                                 <Route path="/hoja-de-ruta" element={<HojaDeRutaPage />} />
                                 <Route path="*" element={<NotFoundPage />} />
                             </Routes>

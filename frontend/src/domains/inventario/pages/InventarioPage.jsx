@@ -146,7 +146,7 @@ function Campo({ etiqueta, ayuda, requerido, children }) {
 
 // ── nodo del árbol (recursivo) ────────────────────────────────────────────────
 
-function NodoInventario({ nodo, onAgregarHijo, onEditar, onEliminar, onFicha, onIndicadores }) {
+function NodoInventario({ nodo, onAgregarHijo, onEditar, onEliminar, onFicha, onIndicadores, onMejora }) {
     const [abierto, setAbierto] = useState(true)
     const tieneHijos = nodo.hijos.length > 0
 
@@ -184,6 +184,7 @@ function NodoInventario({ nodo, onAgregarHijo, onEditar, onEliminar, onFicha, on
                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <BotonIcono icon="description" title="Ficha de proceso (Anexo 2)" onClick={() => onFicha(nodo)} />
                         <BotonIcono icon="insights" title="Indicadores (Anexo 4)" onClick={() => onIndicadores(nodo)} />
+                        <BotonIcono icon="trending_up" title="Mejora (Ishikawa / oportunidades / comparación)" onClick={() => onMejora(nodo)} />
                         <BotonIcono icon="add" title="Agregar subproceso" onClick={() => onAgregarHijo(nodo)} />
                         <BotonIcono icon="edit" title="Editar" onClick={() => onEditar(nodo)} />
                         <BotonIcono icon="delete" title="Eliminar" onClick={() => onEliminar(nodo)} peligro />
@@ -194,7 +195,7 @@ function NodoInventario({ nodo, onAgregarHijo, onEditar, onEliminar, onFicha, on
             {abierto && tieneHijos && (
                 <div>
                     {nodo.hijos.map((h) => (
-                        <NodoInventario key={h.id} nodo={h} onAgregarHijo={onAgregarHijo} onEditar={onEditar} onEliminar={onEliminar} onFicha={onFicha} onIndicadores={onIndicadores} />
+                        <NodoInventario key={h.id} nodo={h} onAgregarHijo={onAgregarHijo} onEditar={onEditar} onEliminar={onEliminar} onFicha={onFicha} onIndicadores={onIndicadores} onMejora={onMejora} />
                     ))}
                 </div>
             )}
@@ -364,6 +365,7 @@ export default function InventarioPage() {
                             onEliminar={handleEliminar}
                             onFicha={(n) => navigate(`/proceso/${n.codigo}/ficha`)}
                             onIndicadores={(n) => navigate(`/proceso/${n.codigo}/indicadores`)}
+                            onMejora={(n) => navigate(`/proceso/${n.codigo}/mejora`)}
                         />
                     ))}
                 </div>
