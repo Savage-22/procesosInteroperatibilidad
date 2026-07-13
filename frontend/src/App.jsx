@@ -14,6 +14,9 @@ import ParetoPage from './domains/pareto/pages/ParetoPage'
 import PrediccionesPage from './domains/predicciones/pages/PrediccionesPage'
 import MetodologiaPage from './domains/metodologia/pages/MetodologiaPage'
 import ObjetivosPage from './domains/objetivos/pages/ObjetivosPage'
+import InventarioPage from './domains/inventario/pages/InventarioPage'
+import FichaProcesoPage from './domains/fichas/pages/FichaProcesoPage'
+import IndicadoresPage from './domains/fichas/pages/IndicadoresPage'
 
 export default function App() {
     return (
@@ -32,6 +35,9 @@ export default function App() {
                                 <Route path="/predicciones" element={<PrediccionesPage />} />
                                 <Route path="/metodologia" element={<MetodologiaPage />} />
                                 <Route path="/objetivos" element={<ObjetivosPage />} />
+                                <Route path="/inventario" element={<InventarioPage />} />
+                                <Route path="/proceso/:codigo/ficha" element={<FichaProcesoPage />} />
+                                <Route path="/proceso/:codigo/indicadores" element={<IndicadoresPage />} />
                                 <Route path="/hoja-de-ruta" element={<HojaDeRutaPage />} />
                                 <Route path="*" element={<NotFoundPage />} />
                             </Routes>

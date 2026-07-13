@@ -426,7 +426,7 @@ export default function MetodologiaPage() {
             try {
                 const res = await getMetodologia()
                 if (isMounted) { setDatos(res.data); setError(null) }
-            } catch (err) {
+            } catch {
                 if (isMounted) setError('No se pudo cargar la metodología. Verifica que el servidor esté activo.')
             } finally {
                 if (isMounted) setIsLoading(false)

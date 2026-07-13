@@ -1,10 +1,13 @@
+import logging
 import os
 from collections.abc import Iterator
 from pathlib import Path
 
-from sqlalchemy import event
+from sqlalchemy import event, inspect, text
 from sqlalchemy.engine import Engine, make_url
 from sqlmodel import Session, SQLModel, create_engine
+
+logger = logging.getLogger(__name__)
 
 # Por defecto SQLite en un archivo local; en producción se apunta a un volumen
 # persistente vía DATABASE_URL (ej. sqlite:////data/siip.db). La URL usa el
@@ -48,6 +51,30 @@ def init_db() -> None:
     from modules.fichas.infrastructure import models  # noqa: F401
 
     SQLModel.metadata.create_all(engine)
+    _sincronizar_columnas()
+
+
+def _sincronizar_columnas() -> None:
+    """
+    Mini-migración para SQLite: create_all crea tablas nuevas pero no agrega
+    columnas a tablas ya existentes. Al evolucionar el esquema (fichas, mejora)
+    esto añade las columnas que falten sin perder datos. Sin Alembic todavía.
+    """
+    if not _es_sqlite:
+        return
+    inspector = inspect(engine)
+    tablas_existentes = set(inspector.get_table_names())
+    with engine.begin() as conn:
+        for tabla in SQLModel.metadata.sorted_tables:
+            if tabla.name not in tablas_existentes:
+                continue
+            columnas_bd = {c["name"] for c in inspector.get_columns(tabla.name)}
+            for columna in tabla.columns:
+                if columna.name in columnas_bd:
+                    continue
+                tipo_sql = columna.type.compile(dialect=engine.dialect)
+                conn.execute(text(f'ALTER TABLE "{tabla.name}" ADD COLUMN "{columna.name}" {tipo_sql}'))
+                logger.info(f"Columna agregada: {tabla.name}.{columna.name}")
 
 
 def get_session() -> Iterator[Session]:
