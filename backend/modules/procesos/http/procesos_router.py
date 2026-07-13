@@ -3,6 +3,7 @@ import io
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 import pandas as pd
 
+from modules.fichas.application.sincronizador import Sincronizador
 from modules.procesos.application.proceso_service import ProcesoService
 from modules.procesos.infrastructure.excel_reader import ExcelStore
 from shared.meses import orden_mes, ordenar_por_mes
@@ -143,7 +144,7 @@ async def subir_excel(archivo: UploadFile = File(...)):
     except Exception:
         raise HTTPException(status_code=400, detail="El archivo no es un Excel legible")
 
-    ruta = ExcelStore.get_ruta()
+    ruta = Sincronizador.get_ruta()
     if not ruta:
         raise HTTPException(status_code=500, detail="El servidor no tiene configurada la ruta del Excel")
 
@@ -153,7 +154,8 @@ async def subir_excel(archivo: UploadFile = File(...)):
     except OSError as e:
         raise HTTPException(status_code=500, detail=f"No se pudo guardar el archivo: {e}")
 
-    ExcelStore.cargar(ruta)
+    # Importa/actualiza en la BD (upsert) y rehidrata el store en memoria
+    Sincronizador.importar_archivo(ruta)
     return {"success": True, "data": ExcelStore.get_meta()}
 
 

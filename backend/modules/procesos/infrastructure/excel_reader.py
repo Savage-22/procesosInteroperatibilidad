@@ -106,11 +106,30 @@ def _buscar_encabezado(df_raw: pd.DataFrame) -> tuple[int, dict[str, int]] | Non
     return None
 
 
-def _meta_texto(meta_final: float | None, unidad: str, es_descendente: bool) -> str:
+def meta_texto(meta_final: float | None, unidad: str, es_descendente: bool) -> str:
     if meta_final is None:
         return ""
     simbolo = "≤" if es_descendente else "≥"
     return f"{simbolo} {meta_final:g} {unidad}".strip()
+
+
+def derivar_obtenido(
+    numerador: float | None,
+    denominador: float | None,
+    unidad: str,
+    fallback: float | None,
+) -> float | None:
+    """
+    Deriva el resultado obtenido de numerador/denominador; la columna del Excel
+    solo es respaldo para indicadores sin conteo (evita errores de tipeo).
+    En unidades no porcentuales (ej. días) es un promedio: total/casos.
+    Se comparte entre la lectura del Excel y la reconstrucción desde la BD.
+    """
+    if numerador is not None and denominador:
+        bruto = numerador / denominador
+        es_porcentual = unidad in ("", "%")
+        return round(bruto * 100, 2) if es_porcentual else round(bruto, 2)
+    return fallback
 
 
 def _parsear_hoja(df_raw: pd.DataFrame, hoja: str) -> tuple[list[dict], list[str]]:
@@ -148,15 +167,9 @@ def _parsear_hoja(df_raw: pd.DataFrame, hoja: str) -> tuple[list[dict], list[str
         denominador = _float_o_none(valor(fila, "denominador"))
         esperado = _float_o_none(valor(fila, "resultado_esperado"))
 
-        # El obtenido se deriva de numerador/denominador; la columna del Excel
-        # solo es respaldo para indicadores sin conteo (evita errores de tipeo).
-        # En unidades no porcentuales (ej. días) es un promedio: total/casos.
-        if numerador is not None and denominador:
-            bruto = numerador / denominador
-            es_porcentual = unidad in ("", "%")
-            obtenido = round(bruto * 100, 2) if es_porcentual else round(bruto, 2)
-        else:
-            obtenido = _float_o_none(valor(fila, "resultado_obtenido"))
+        obtenido = derivar_obtenido(
+            numerador, denominador, unidad, _float_o_none(valor(fila, "resultado_obtenido"))
+        )
 
         diferencia = (
             round(obtenido - esperado, 2)
@@ -175,7 +188,7 @@ def _parsear_hoja(df_raw: pd.DataFrame, hoja: str) -> tuple[list[dict], list[str
             "accion_estrategica": _str_o_vacio(valor(fila, "accion_estrategica")),
             "sentido": sentido or "Ascendente",
             "unidad": unidad,
-            "meta_texto": _meta_texto(meta_final, unidad, es_descendente),
+            "meta_texto": meta_texto(meta_final, unidad, es_descendente),
             "meta_final": meta_final,
             "anio": _int_o_none(valor(fila, "anio")),
             "mes": mes,
@@ -190,6 +203,36 @@ def _parsear_hoja(df_raw: pd.DataFrame, hoja: str) -> tuple[list[dict], list[str
         })
 
     return registros, []
+
+
+def parsear_excel(fuente) -> tuple[list[dict], list[str]]:
+    """
+    Parsea un Excel (ruta o buffer) a la lista de registros canónica, sin tocar
+    estado global. Lo usan tanto ExcelStore (lectura en memoria) como el
+    importador a la BD (issue #51).
+    """
+    advertencias: list[str] = []
+    xl = pd.ExcelFile(fuente)
+
+    registros: list[dict] = []
+    for hoja in xl.sheet_names:
+        try:
+            df_raw = xl.parse(hoja, header=None)
+            filas, avisos = _parsear_hoja(df_raw, hoja)
+            registros.extend(filas)
+            advertencias.extend(avisos)
+            modulos = sorted({r["modulo"] for r in filas})
+            logger.info(f"  [{hoja}] → {modulos}: {len(filas)} registros")
+        except Exception as e:
+            logger.warning(f"  Error en hoja '{hoja}': {e}")
+            advertencias.append(f"No se pudo leer la hoja '{hoja}' del Excel")
+
+    modulos_presentes = {r["modulo"] for r in registros}
+    for esperado in MODULOS_ESPERADOS:
+        if esperado not in modulos_presentes:
+            advertencias.append(f"El módulo {esperado} no tiene datos en el Excel")
+
+    return registros, advertencias
 
 
 class ExcelStore:
@@ -216,30 +259,13 @@ class ExcelStore:
         mtime = os.path.getmtime(excel_path)
 
         try:
-            xl = pd.ExcelFile(excel_path)
+            registros, avisos = parsear_excel(excel_path)
         except Exception as e:
             # Se conservan los datos anteriores si el archivo está bloqueado o corrupto
             logger.error(f"No se pudo abrir {excel_path}: {e}")
             return
 
-        registros: list[dict] = []
-        for hoja in xl.sheet_names:
-            try:
-                df_raw = xl.parse(hoja, header=None)
-                filas, avisos = _parsear_hoja(df_raw, hoja)
-                registros.extend(filas)
-                advertencias.extend(avisos)
-                modulos = sorted({r["modulo"] for r in filas})
-                logger.info(f"  [{hoja}] → {modulos}: {len(filas)} registros")
-            except Exception as e:
-                logger.warning(f"  Error en hoja '{hoja}': {e}")
-                advertencias.append(f"No se pudo leer la hoja '{hoja}' del Excel")
-
-        modulos_presentes = {r["modulo"] for r in registros}
-        for esperado in MODULOS_ESPERADOS:
-            if esperado not in modulos_presentes:
-                advertencias.append(f"El módulo {esperado} no tiene datos en el Excel")
-
+        advertencias.extend(avisos)
         cls._mtime = mtime
         cls._aplicar(registros, advertencias)
         logger.info(f"ExcelStore listo: {len(registros)} registros en total (versión {cls._version})")
@@ -250,6 +276,11 @@ class ExcelStore:
         cls._advertencias = advertencias
         cls._version += 1
         cls._ultima_carga = datetime.now().astimezone().isoformat()
+
+    @classmethod
+    def set_registros(cls, registros: list[dict], advertencias: list[str] | None = None) -> None:
+        """Hidrata el store desde una fuente externa (la BD, issue #51)."""
+        cls._aplicar(registros, advertencias or [])
 
     @classmethod
     def recargar_si_cambio(cls) -> bool:

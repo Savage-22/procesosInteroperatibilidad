@@ -117,6 +117,9 @@ class FichaIndicador(SQLModel, table=True):
     fuente: str | None = None
     responsable: str | None = None
     relevancia: int = Field(default=1)       # 1=muy relevante … 3=menos relevante
+    # Planeamiento estratégico (CEPLAN): el módulo de objetivos agrupa por estos
+    objetivo_estrategico: str | None = None
+    accion_estrategica: str | None = None
     activo: bool = Field(default=True)
     creado_en: datetime = Field(default_factory=_ahora)
     actualizado_en: datetime = Field(default_factory=_ahora)

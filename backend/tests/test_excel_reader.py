@@ -5,7 +5,7 @@ from modules.procesos.infrastructure.excel_reader import (
     _buscar_encabezado,
     _float_o_none,
     _int_o_none,
-    _meta_texto,
+    meta_texto,
     _normalizar,
 )
 
@@ -60,9 +60,9 @@ def test_buscar_encabezado_sin_encabezados():
 
 
 def test_meta_texto():
-    assert _meta_texto(90.0, "%", False) == "≥ 90 %"
-    assert _meta_texto(20.0, "días", True) == "≤ 20 días"
-    assert _meta_texto(None, "%", False) == ""
+    assert meta_texto(90.0, "%", False) == "≥ 90 %"
+    assert meta_texto(20.0, "días", True) == "≤ 20 días"
+    assert meta_texto(None, "%", False) == ""
 
 
 def test_float_o_none():
