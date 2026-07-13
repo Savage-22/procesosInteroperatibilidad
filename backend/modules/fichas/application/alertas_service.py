@@ -13,6 +13,7 @@ from modules.fichas.infrastructure.models import (
 from modules.procesos.application.proceso_service import ProcesoService
 from modules.procesos.infrastructure.excel_reader import derivar_obtenido
 from shared.meses import orden_mes
+from shared.periodo import clave_periodo, etiqueta_periodo, meses_periodo
 from shared.semaforo import calcular_semaforo
 
 
@@ -20,14 +21,18 @@ class AlertasMejoraService:
     """
     Detección autónoma de procesos que deberían implementar mejoras (Mejora V).
 
-    Recorre todos los procesos de la organización, evalúa el último desempeño de
-    sus indicadores y prioriza los que están en rojo/ámbar, sugiriendo el
-    siguiente paso de mejora según lo que aún falte.
+    Evaluación **semestral**: para cada indicador se toma el desempeño en el
+    **mes de corte** —el último mes con dato dentro del periodo (Ene–Jun)— y se
+    compara el valor obtenido contra la **meta final** (no el esperado mensual),
+    aplicando el semáforo CEPLAN. Si en el mes de corte no llegó a la meta
+    (semáforo Ámbar/Rojo) el proceso entra a la lista de mejora, priorizado por
+    urgencia y con el siguiente paso sugerido según lo que aún falte.
     """
 
     @staticmethod
-    def evaluar(session: Session) -> dict:
+    def evaluar(session: Session, periodo: str | None = None) -> dict:
         org = OrganizacionService.actual(session)
+        meses = meses_periodo(periodo)
         procesos = session.exec(
             select(Proceso).where(
                 Proceso.organizacion_id == org.id,
@@ -38,11 +43,16 @@ class AlertasMejoraService:
         alertas = [
             alerta
             for proceso in procesos
-            if (alerta := AlertasMejoraService._evaluar_proceso(session, proceso)) is not None
+            if (alerta := AlertasMejoraService._evaluar_proceso(session, proceso, meses)) is not None
         ]
         alertas.sort(key=lambda a: a["puntaje"], reverse=True)
 
         return {
+            "periodo": {
+                "clave": clave_periodo(periodo),
+                "etiqueta": etiqueta_periodo(periodo),
+                "meses": meses,
+            },
             "resumen": {
                 "criticos": sum(1 for a in alertas if a["nivel"] == "critico"),
                 "atencion": sum(1 for a in alertas if a["nivel"] == "atencion"),
@@ -56,7 +66,7 @@ class AlertasMejoraService:
     # ------------------------------------------------------------------ #
 
     @staticmethod
-    def _evaluar_proceso(session: Session, proceso: Proceso) -> dict | None:
+    def _evaluar_proceso(session: Session, proceso: Proceso, meses: list[str]) -> dict | None:
         indicadores = session.exec(
             select(FichaIndicador).where(
                 FichaIndicador.proceso_id == proceso.id,
@@ -68,10 +78,10 @@ class AlertasMejoraService:
 
         avances = [
             av for ind in indicadores
-            if (av := AlertasMejoraService._ultimo_avance(session, ind)) is not None
+            if (av := AlertasMejoraService._avance_corte(session, ind, meses)) is not None
         ]
         if not avances:
-            return None  # sin mediciones utilizables: no se puede evaluar el desempeño
+            return None  # sin mediciones dentro del periodo: no se puede evaluar
 
         rojos = sum(1 for a in avances if a["semaforo"] == "Rojo")
         amarillos = sum(1 for a in avances if a["semaforo"] == "Amarillo")
@@ -80,11 +90,13 @@ class AlertasMejoraService:
         elif amarillos > 0:
             nivel = "atencion"
         else:
-            return None  # todos en verde: no requiere mejora
+            return None  # todos cumplen la meta en el corte: no requiere mejora
 
         brechas = [max(0.0, 100 - a["avance"]) for a in avances]
         brecha_prom = round(sum(brechas) / len(brechas), 1)
         peor_avance = round(min(a["avance"] for a in avances), 1)
+        # Mes de corte del proceso: el más avanzado entre sus indicadores
+        mes_corte = max((a["mes"] for a in avances), key=orden_mes)
 
         mejora = AlertasMejoraService._estado_mejora(session, proceso, [i.id for i in indicadores])
 
@@ -97,7 +109,7 @@ class AlertasMejoraService:
             motivos.append(f"{rojos} indicador(es) en rojo")
         if amarillos:
             motivos.append(f"{amarillos} en ámbar")
-        motivos.append(f"brecha promedio de {brecha_prom} pp vs la meta")
+        motivos.append(f"no alcanzó la meta a {mes_corte} (brecha promedio {brecha_prom} pp)")
         if not mejora["tiene_algo"]:
             motivos.append("sin análisis de mejora registrado")
 
@@ -105,6 +117,7 @@ class AlertasMejoraService:
             "codigo": proceso.codigo,
             "nombre": proceso.nombre,
             "nivel": nivel,
+            "mes_corte": mes_corte,
             "rojos": rojos,
             "amarillos": amarillos,
             "brecha_promedio": brecha_prom,
@@ -117,20 +130,28 @@ class AlertasMejoraService:
         }
 
     @staticmethod
-    def _ultimo_avance(session: Session, indicador: FichaIndicador) -> dict | None:
-        """Avance T1 y semáforo de la última medición con valor. None si no evaluable."""
+    def _avance_corte(session: Session, indicador: FichaIndicador, meses: list[str]) -> dict | None:
+        """
+        Desempeño en el mes de corte: último mes con dato dentro del periodo.
+        Compara el valor obtenido contra la META FINAL (no el esperado mensual)
+        y devuelve avance + semáforo + mes de corte. None si no es evaluable.
+        """
         if indicador.meta_final is None:
             return None
         unidad = indicador.unidad or ""
         mediciones = sorted(
-            session.exec(select(Medicion).where(Medicion.indicador_id == indicador.id)).all(),
+            (m for m in session.exec(
+                select(Medicion).where(Medicion.indicador_id == indicador.id)
+            ).all() if m.mes in meses),
             key=lambda m: orden_mes(m.mes),
         )
         valor = None
+        mes_corte = None
         for m in reversed(mediciones):
             v = derivar_obtenido(m.numerador, m.denominador, unidad, m.resultado_obtenido)
             if v is not None:
                 valor = v
+                mes_corte = m.mes
                 break
         if valor is None:
             return None
@@ -139,7 +160,7 @@ class AlertasMejoraService:
         avance = ProcesoService.calcular_avance_t1(valor, indicador.meta_final, es_descendente)
         if avance is None:
             return None
-        return {"avance": avance, "semaforo": calcular_semaforo(avance)}
+        return {"avance": avance, "semaforo": calcular_semaforo(avance), "mes": mes_corte}
 
     # ------------------------------------------------------------------ #
     # Estado de la mejora y siguiente paso sugerido                      #

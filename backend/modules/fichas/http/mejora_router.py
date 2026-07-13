@@ -56,9 +56,12 @@ def categorias_6m():
 
 
 @router.get("/mejora/alertas")
-def alertas_mejora(session: Session = Depends(get_session)):
-    """Procesos que deberían implementar mejoras, priorizados de forma autónoma."""
-    return {"success": True, "data": _manejar(lambda: AlertasMejoraService.evaluar(session))}
+def alertas_mejora(periodo: str | None = None, session: Session = Depends(get_session)):
+    """Procesos que deberían implementar mejoras, priorizados de forma autónoma.
+
+    Evaluación semestral: `periodo` = S1 (Ene–Jun) | S2 (Jul–Dic); por defecto S1.
+    """
+    return {"success": True, "data": _manejar(lambda: AlertasMejoraService.evaluar(session, periodo))}
 
 
 @router.get("/procesos/{codigo}/causas")

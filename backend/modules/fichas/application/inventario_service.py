@@ -8,26 +8,33 @@ NIVEL_MAXIMO = 3
 
 # Plantilla de arranque: macroprocesos M1–M4 de interoperabilidad y sus procesos.
 # Sirve como punto de partida editable para una organización que empieza de 0.
+# Cada proceso trae un indicador sugerido (nombre, sentido, unidad, meta_final)
+# para que quede medible y la evaluación semestral pueda calcularse; todo es
+# editable en el Anexo 4 y las metas son referenciales.
+def _ind(nombre, meta, sentido="Ascendente", unidad="%"):
+    return {"nombre": nombre, "sentido": sentido, "unidad": unidad, "meta_final": meta}
+
+
 PLANTILLA_INTEROPERABILIDAD = [
     ("M1", "Diseño de servicios de interoperabilidad", [
-        ("M1.1", "Identificación de necesidades del servicio"),
-        ("M1.2", "Análisis del proceso actual"),
-        ("M1.3", "Diseño del servicio interoperable"),
+        ("M1.1", "Identificación de necesidades del servicio", _ind("% de requisitos de interoperabilidad validados", 90)),
+        ("M1.2", "Análisis del proceso actual", _ind("% de procesos actuales diagnosticados", 90)),
+        ("M1.3", "Diseño del servicio interoperable", _ind("% de diseños aprobados a la primera", 85)),
     ]),
     ("M2", "Implementación de servicios de interoperabilidad", [
-        ("M2.1", "Gestión de solicitudes de interoperabilidad"),
-        ("M2.2", "Diseño y configuración de la integración"),
-        ("M2.3", "Ejecución de pruebas de interoperabilidad"),
+        ("M2.1", "Gestión de solicitudes de interoperabilidad", _ind("Tiempo promedio de atención de solicitudes", 5, "Descendente", "días")),
+        ("M2.2", "Diseño y configuración de la integración", _ind("% de integraciones configuradas sin retrabajo", 90)),
+        ("M2.3", "Ejecución de pruebas de interoperabilidad", _ind("% de pruebas de interoperabilidad exitosas", 95)),
     ]),
     ("M3", "Integración de sistemas", [
-        ("M3.1", "Análisis y especificación de la integración"),
-        ("M3.2", "Desarrollo y configuración del middleware/API"),
-        ("M3.3", "Pruebas y aseguramiento de interoperabilidad"),
+        ("M3.1", "Análisis y especificación de la integración", _ind("% de especificaciones completas y aprobadas", 90)),
+        ("M3.2", "Desarrollo y configuración del middleware/API", _ind("% de servicios/API entregados a tiempo", 90)),
+        ("M3.3", "Pruebas y aseguramiento de interoperabilidad", _ind("% de defectos de interoperabilidad resueltos", 95)),
     ]),
     ("M4", "Orquestación de servicios interoperables", [
-        ("M4.1", "Planificación de la orquestación"),
-        ("M4.2", "Configuración de servicios interoperables"),
-        ("M4.3", "Ejecución de servicios interoperables"),
+        ("M4.1", "Planificación de la orquestación", _ind("% de flujos de orquestación planificados", 90)),
+        ("M4.2", "Configuración de servicios interoperables", _ind("% de servicios configurados correctamente", 90)),
+        ("M4.3", "Ejecución de servicios interoperables", _ind("Disponibilidad de servicios interoperables", 95)),
     ]),
 ]
 
@@ -184,7 +191,11 @@ class InventarioService:
 
     @staticmethod
     def cargar_plantilla(session: Session) -> int:
-        """Precarga los macroprocesos M1–M4 y sus procesos. Omite los que ya existen."""
+        """
+        Precarga los macroprocesos M1–M4, sus procesos y un indicador sugerido
+        por proceso. Omite los que ya existen (idempotente). Devuelve el número
+        de procesos creados.
+        """
         org = OrganizacionService.actual(session)
         creados = 0
         for codigo_macro, nombre_macro, hijos in PLANTILLA_INTEROPERABILIDAD:
@@ -194,13 +205,18 @@ class InventarioService:
                     nombre=nombre_macro, nivel=0, codigo_padre=None,
                 ))
                 creados += 1
-            for codigo_hijo, nombre_hijo in hijos:
-                if not InventarioService._buscar_por_codigo(session, org.id, codigo_hijo):
-                    session.add(Proceso(
-                        organizacion_id=org.id, codigo=codigo_hijo,
-                        nombre=nombre_hijo, nivel=1, codigo_padre=codigo_macro,
-                    ))
-                    creados += 1
+            for codigo_hijo, nombre_hijo, indicador in hijos:
+                if InventarioService._buscar_por_codigo(session, org.id, codigo_hijo):
+                    continue
+                proceso = Proceso(
+                    organizacion_id=org.id, codigo=codigo_hijo,
+                    nombre=nombre_hijo, nivel=1, codigo_padre=codigo_macro,
+                )
+                session.add(proceso)
+                creados += 1
+                if indicador:
+                    session.flush()  # obtiene proceso.id sin cerrar la transacción
+                    session.add(FichaIndicador(proceso_id=proceso.id, **indicador))
         session.commit()
         return creados
 
