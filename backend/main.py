@@ -11,6 +11,7 @@ from modules.chat.chat_router import router as chat_router
 from modules.dashboard.application.dashboard_service import DashboardService
 from modules.dashboard.http.dashboard_router import router as dashboard_router
 from modules.fichas.application.sincronizador import Sincronizador
+from modules.fichas.http.inventario_router import router as inventario_router
 from modules.fichas.infrastructure.database import init_db
 from modules.objetivos.objetivos_router import router as objetivos_router
 from modules.plantilla.plantilla_router import router as plantilla_router
@@ -54,7 +55,7 @@ app = FastAPI(title="SIIP — Sistema Inteligente de Interoperabilidad de Proces
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(","),
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -64,6 +65,7 @@ app.include_router(dashboard_router)
 app.include_router(plantilla_router)
 app.include_router(objetivos_router)
 app.include_router(chat_router)
+app.include_router(inventario_router)
 
 
 @app.get("/health")

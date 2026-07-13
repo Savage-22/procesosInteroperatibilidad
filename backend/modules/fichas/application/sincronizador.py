@@ -79,6 +79,12 @@ class Sincronizador:
         return True
 
     @classmethod
+    def rehidratar(cls) -> None:
+        """Reconstruye el store en memoria desde la BD. Se llama al editar fichas."""
+        with Session(engine) as session:
+            cls._rehidratar(session)
+
+    @classmethod
     def _rehidratar(cls, session: Session) -> None:
         registros = LecturaBD.construir_registros(session)
         ExcelStore.set_registros(registros)

@@ -9,6 +9,7 @@ import BotonPlantilla from './BotonPlantilla'
 const LINKS = [
     { to: '/',             label: 'Dashboard',    short: 'Dashboard',  icon: 'dashboard'      },
     { to: '/hoja-de-ruta', label: 'Hoja de Ruta', short: 'Guía',       icon: 'route'          },
+    { to: '/inventario',   label: 'Inventario',   short: 'Inventario', icon: 'account_tree'   },
     { to: '/objetivos',    label: 'Objetivos',    short: 'Objetivos',  icon: 'flag'           },
     { to: '/comparativa',  label: 'Comparativa',  short: 'Comparativa',icon: 'compare_arrows' },
     { to: '/pareto',       label: 'Pareto',        short: 'Pareto',     icon: 'bar_chart'      },
