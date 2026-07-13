@@ -2,6 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session
 
+from modules.fichas.application.cambio_service import (
+    ESTADOS_CAMBIO,
+    ETAPAS,
+    CambioService,
+)
 from modules.fichas.application.causa_service import CATEGORIAS_6M, CausaService
 from modules.fichas.application.comparacion_service import ComparacionService
 from modules.fichas.application.errores import ErrorNoEncontrado, ErrorValidacion
@@ -37,7 +42,16 @@ class CausaEntrada(BaseModel):
 
 @router.get("/mejora/categorias")
 def categorias_6m():
-    return {"success": True, "data": {"categorias": CATEGORIAS_6M, "estrategias": ESTRATEGIAS, "estados": ESTADOS}}
+    return {
+        "success": True,
+        "data": {
+            "categorias": CATEGORIAS_6M,
+            "estrategias": ESTRATEGIAS,
+            "estados": ESTADOS,
+            "etapas_cambio": ETAPAS,
+            "estados_cambio": ESTADOS_CAMBIO,
+        },
+    }
 
 
 @router.get("/procesos/{codigo}/causas")
@@ -136,3 +150,39 @@ def guardar_proyeccion(indicador_id: int, datos: ProyeccionEntrada, session: Ses
 @router.get("/indicadores/{indicador_id}/proyeccion/sugerir")
 def sugerir_proyeccion(indicador_id: int, session: Session = Depends(get_session)):
     return {"success": True, "data": _manejar(lambda: ComparacionService.sugerir_proyeccion(session, indicador_id))}
+
+
+# ------------------------------------------------------------------ #
+# Mejora IV — Gestión del cambio (modelo de Kurt Lewin)              #
+# ------------------------------------------------------------------ #
+
+class AccionCambioEntrada(BaseModel):
+    etapa: str | None = None
+    descripcion: str | None = None
+    responsable: str | None = None
+    fecha: str | None = None
+    estado: str | None = None
+    orden: int | None = None
+
+
+@router.get("/procesos/{codigo}/cambio")
+def listar_cambio(codigo: str, session: Session = Depends(get_session)):
+    return {"success": True, "data": _manejar(lambda: CambioService.listar(session, codigo))}
+
+
+@router.post("/procesos/{codigo}/cambio")
+def crear_accion_cambio(codigo: str, datos: AccionCambioEntrada, session: Session = Depends(get_session)):
+    data = _manejar(lambda: CambioService.crear(session, codigo, datos.model_dump(exclude_unset=True)))
+    return {"success": True, "message": "Acción de cambio registrada", "data": data}
+
+
+@router.put("/cambio/{accion_id}")
+def actualizar_accion_cambio(accion_id: int, datos: AccionCambioEntrada, session: Session = Depends(get_session)):
+    data = _manejar(lambda: CambioService.actualizar(session, accion_id, datos.model_dump(exclude_unset=True)))
+    return {"success": True, "message": "Acción de cambio actualizada", "data": data}
+
+
+@router.delete("/cambio/{accion_id}")
+def eliminar_accion_cambio(accion_id: int, session: Session = Depends(get_session)):
+    _manejar(lambda: CambioService.eliminar(session, accion_id))
+    return {"success": True, "message": "Acción de cambio eliminada"}

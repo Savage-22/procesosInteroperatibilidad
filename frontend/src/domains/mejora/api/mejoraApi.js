@@ -38,3 +38,17 @@ export async function guardarProyeccion(indicadorId, datos) {
 export async function sugerirProyeccion(indicadorId) {
     return (await httpClient.get(`/api/indicadores/${indicadorId}/proyeccion/sugerir`)).data
 }
+
+// ── Gestión del cambio (Kurt Lewin) ───────────────────────────────
+export async function getCambio(codigo) {
+    return (await httpClient.get(`/api/procesos/${codigo}/cambio`)).data
+}
+export async function crearAccionCambio(codigo, datos) {
+    return (await httpClient.post(`/api/procesos/${codigo}/cambio`, datos)).data
+}
+export async function actualizarAccionCambio(id, datos) {
+    return (await httpClient.put(`/api/cambio/${id}`, datos)).data
+}
+export async function eliminarAccionCambio(id) {
+    return (await httpClient.delete(`/api/cambio/${id}`)).data
+}

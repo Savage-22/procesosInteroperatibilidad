@@ -4,11 +4,13 @@ import { useParams, useNavigate } from 'react-router-dom'
 import IshikawaTab from '../components/IshikawaTab'
 import OportunidadesTab from '../components/OportunidadesTab'
 import ComparacionTab from '../components/ComparacionTab'
+import CambioTab from '../components/CambioTab'
 
 const TABS = [
     { id: 'ishikawa', label: 'Diagnóstico (Ishikawa)', icon: 'lan' },
     { id: 'oportunidades', label: 'Oportunidades (F=C×I)', icon: 'lightbulb' },
     { id: 'comparacion', label: 'Antes / Después', icon: 'compare_arrows' },
+    { id: 'cambio', label: 'Gestión del cambio (Lewin)', icon: 'change_circle' },
 ]
 
 export default function MejoraPage() {
@@ -44,6 +46,7 @@ export default function MejoraPage() {
             {tab === 'ishikawa' && <IshikawaTab codigo={codigo} />}
             {tab === 'oportunidades' && <OportunidadesTab codigo={codigo} />}
             {tab === 'comparacion' && <ComparacionTab codigo={codigo} />}
+            {tab === 'cambio' && <CambioTab codigo={codigo} />}
         </div>
     )
 }

@@ -220,3 +220,25 @@ class Proyeccion(SQLModel, table=True):
     nota: str | None = None
     creado_en: datetime = Field(default_factory=_ahora)
     actualizado_en: datetime = Field(default_factory=_ahora)
+
+
+# --------------------------------------------------------------------------- #
+# Mejora IV — Gestión del cambio (modelo de Kurt Lewin) — N a 1 con Proceso    #
+# --------------------------------------------------------------------------- #
+
+class AccionCambio(SQLModel, table=True):
+    __tablename__ = "accion_cambio"
+
+    id: int | None = Field(default=None, primary_key=True)
+    proceso_id: int = Field(foreign_key="proceso.id", index=True)
+
+    # Etapa del modelo de Kurt Lewin: descongelar | cambiar | recongelar
+    etapa: str
+    descripcion: str
+    responsable: str | None = None
+    fecha: str | None = None                   # fecha compromiso (ISO AAAA-MM-DD)
+    estado: str = Field(default="pendiente")   # pendiente | en_curso | hecho
+    orden: int = Field(default=0)
+    activo: bool = Field(default=True)
+    creado_en: datetime = Field(default_factory=_ahora)
+    actualizado_en: datetime = Field(default_factory=_ahora)

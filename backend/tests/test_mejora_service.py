@@ -1,6 +1,7 @@
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
+from modules.fichas.application.cambio_service import CambioService
 from modules.fichas.application.causa_service import CausaService
 from modules.fichas.application.comparacion_service import ComparacionService
 from modules.fichas.application.errores import ErrorValidacion
@@ -140,3 +141,41 @@ def test_sugerir_proyeccion_rampa_hacia_meta(session, proceso):
     assert meses[0]["mes"] == "Julio"
     assert meses[-1]["mes"] == "Diciembre"
     assert meses[-1]["valor"] == 90.0     # llega a la meta en diciembre
+
+
+# ── #63 Gestión del cambio (Kurt Lewin) ───────────────────────────────────────
+
+def test_crear_accion_cambio_etapa_invalida_falla(session, proceso):
+    with pytest.raises(ErrorValidacion, match="Etapa"):
+        CambioService.crear(session, "M3.1", {"etapa": "otra", "descripcion": "x"})
+
+
+def test_cambio_agrupa_por_etapa_lewin(session, proceso):
+    CambioService.crear(session, "M3.1", {"etapa": "descongelar", "descripcion": "Comunicar necesidad"})
+    CambioService.crear(session, "M3.1", {"etapa": "cambiar", "descripcion": "Automatizar registro"})
+    data = CambioService.listar(session, "M3.1")
+    assert data["etapas"] == ["descongelar", "cambiar", "recongelar"]
+    assert len(data["acciones"]["descongelar"]) == 1
+    assert len(data["acciones"]["cambiar"]) == 1
+    assert data["acciones"]["recongelar"] == []
+
+
+def test_cambio_calcula_progreso(session, proceso):
+    a1 = CambioService.crear(session, "M3.1", {"etapa": "cambiar", "descripcion": "A"})
+    CambioService.crear(session, "M3.1", {"etapa": "cambiar", "descripcion": "B"})
+    CambioService.actualizar(session, a1["id"], {"estado": "hecho"})
+    prog = CambioService.listar(session, "M3.1")["progreso"]
+    assert prog["total"] == 2
+    assert prog["hechas"] == 1
+    assert prog["porcentaje"] == 50.0
+
+
+def test_cambio_estado_invalido_falla(session, proceso):
+    with pytest.raises(ErrorValidacion, match="Estado"):
+        CambioService.crear(session, "M3.1", {"etapa": "cambiar", "descripcion": "A", "estado": "raro"})
+
+
+def test_cambio_eliminar_es_soft_delete(session, proceso):
+    a = CambioService.crear(session, "M3.1", {"etapa": "recongelar", "descripcion": "Estandarizar"})
+    CambioService.eliminar(session, a["id"])
+    assert CambioService.listar(session, "M3.1")["acciones"]["recongelar"] == []
