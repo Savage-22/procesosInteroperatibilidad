@@ -8,6 +8,7 @@ import BotonPlantilla from './BotonPlantilla'
 // label: texto en móvil — short: texto en desktop (más corto para que quepa)
 const LINKS = [
     { to: '/',             label: 'Dashboard',    short: 'Dashboard',  icon: 'dashboard'      },
+    { to: '/onboarding',   label: 'Empezar de 0', short: 'Asistente',  icon: 'rocket_launch'  },
     { to: '/hoja-de-ruta', label: 'Hoja de Ruta', short: 'Guía',       icon: 'route'          },
     { to: '/inventario',   label: 'Inventario',   short: 'Inventario', icon: 'account_tree'   },
     { to: '/objetivos',    label: 'Objetivos',    short: 'Objetivos',  icon: 'flag'           },
