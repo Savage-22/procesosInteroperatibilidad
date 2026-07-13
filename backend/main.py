@@ -10,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from modules.chat.chat_router import router as chat_router
 from modules.dashboard.application.dashboard_service import DashboardService
 from modules.dashboard.http.dashboard_router import router as dashboard_router
+from modules.fichas.application.sincronizador import Sincronizador
+from modules.fichas.infrastructure.database import init_db
 from modules.objetivos.objetivos_router import router as objetivos_router
 from modules.plantilla.plantilla_router import router as plantilla_router
 from modules.procesos.http.procesos_router import router as procesos_router
@@ -25,19 +27,23 @@ INTERVALO_VIGILANCIA_SEG = int(os.getenv("EXCEL_WATCH_INTERVAL", "5"))
 
 
 async def _vigilar_excel():
-    # Polling por mtime: funciona igual en Linux, Windows y volúmenes Docker
+    # Polling por mtime: funciona igual en Linux, Windows y volúmenes Docker.
+    # Si el Excel semilla cambia, se reimporta a la BD y se rehidrata el store.
     while True:
         await asyncio.sleep(INTERVALO_VIGILANCIA_SEG)
         try:
-            await asyncio.to_thread(ExcelStore.recargar_si_cambio)
+            await asyncio.to_thread(Sincronizador.recargar_si_cambio)
         except Exception as e:
             logger.warning(f"Error vigilando el Excel: {e}")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # La BD es la fuente de verdad; el Excel es semilla y vía de importación.
+    init_db()
     excel_path = os.getenv("EXCEL_PATH", "../datos_estandarizados.xlsx")
-    ExcelStore.cargar(excel_path)
+    Sincronizador.configurar(excel_path)
+    Sincronizador.iniciar()
     vigilante = asyncio.create_task(_vigilar_excel())
     yield
     vigilante.cancel()
