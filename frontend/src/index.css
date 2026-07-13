@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+/* Impresión de fichas: solo se imprime la zona marcada, sin navbar ni acciones */
+@media print {
+    body * { visibility: hidden; }
+    .zona-imprimible, .zona-imprimible * { visibility: visible; }
+    .zona-imprimible { position: absolute; left: 0; top: 0; width: 100%; }
+    .no-print { display: none !important; }
+}

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { useDatos } from '../../../shared/hooks/useDatos'
 import {
@@ -145,7 +146,7 @@ function Campo({ etiqueta, ayuda, requerido, children }) {
 
 // ── nodo del árbol (recursivo) ────────────────────────────────────────────────
 
-function NodoInventario({ nodo, onAgregarHijo, onEditar, onEliminar }) {
+function NodoInventario({ nodo, onAgregarHijo, onEditar, onEliminar, onFicha }) {
     const [abierto, setAbierto] = useState(true)
     const tieneHijos = nodo.hijos.length > 0
 
@@ -181,6 +182,7 @@ function NodoInventario({ nodo, onAgregarHijo, onEditar, onEliminar }) {
                     )}
 
                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <BotonIcono icon="description" title="Ficha de proceso (Anexo 2)" onClick={() => onFicha(nodo)} />
                         <BotonIcono icon="add" title="Agregar subproceso" onClick={() => onAgregarHijo(nodo)} />
                         <BotonIcono icon="edit" title="Editar" onClick={() => onEditar(nodo)} />
                         <BotonIcono icon="delete" title="Eliminar" onClick={() => onEliminar(nodo)} peligro />
@@ -191,7 +193,7 @@ function NodoInventario({ nodo, onAgregarHijo, onEditar, onEliminar }) {
             {abierto && tieneHijos && (
                 <div>
                     {nodo.hijos.map((h) => (
-                        <NodoInventario key={h.id} nodo={h} onAgregarHijo={onAgregarHijo} onEditar={onEditar} onEliminar={onEliminar} />
+                        <NodoInventario key={h.id} nodo={h} onAgregarHijo={onAgregarHijo} onEditar={onEditar} onEliminar={onEliminar} onFicha={onFicha} />
                     ))}
                 </div>
             )}
@@ -247,6 +249,7 @@ function SinInventario({ onCrear, onPlantilla, cargandoPlantilla }) {
 // ── página principal ──────────────────────────────────────────────────────────
 
 export default function InventarioPage() {
+    const navigate = useNavigate()
     const { refrescar } = useDatos()
     const [datos, setDatos] = useState(null)
     const [isLoading, setIsLoading] = useState(true)
@@ -358,6 +361,7 @@ export default function InventarioPage() {
                             onAgregarHijo={abrirHijo}
                             onEditar={abrirEditar}
                             onEliminar={handleEliminar}
+                            onFicha={(n) => navigate(`/proceso/${n.codigo}/ficha`)}
                         />
                     ))}
                 </div>

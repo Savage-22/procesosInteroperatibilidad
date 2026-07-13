@@ -74,8 +74,10 @@ class FichaProceso(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     proceso_id: int = Field(foreign_key="proceso.id", unique=True, index=True)
 
+    tipo: str | None = None                  # misional | estratégico | soporte
     dueno: str | None = None                 # dueño del proceso
-    objetivo: str | None = None
+    objetivo: str | None = None              # objetivo del proceso
+    objetivo_estrategico: str | None = None  # objetivo estratégico al que aporta
 
     # SIPOC — se guardan como listas de texto (JSON) porque el número de
     # elementos varía entre procesos
@@ -83,6 +85,7 @@ class FichaProceso(SQLModel, table=True):
     entradas: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     salidas: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     receptores: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    actividades: list[str] = Field(default_factory=list, sa_column=Column(JSON))  # ciclo P-D-C-A
     riesgos: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     registros: list[str] = Field(default_factory=list, sa_column=Column(JSON))
 

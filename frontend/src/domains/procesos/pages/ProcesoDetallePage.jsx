@@ -80,6 +80,13 @@ export default function ProcesoDetallePage() {
                             <div className="flex items-center gap-3 mt-2 flex-wrap">
                                 <RelevanciaBadge relevancia={proceso.relevancia} ponderador={proceso.ponderador} />
                                 <MejoraBadge mejora={proceso.mejora} unidad={unidad} />
+                                <button
+                                    onClick={() => navigate(`/proceso/${proceso.codigo}/ficha`)}
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-[#1e3654] bg-[#f2f4f7] hover:bg-gray-200"
+                                >
+                                    <span className="material-symbols-outlined text-sm">description</span>
+                                    Ficha (Anexo 2)
+                                </button>
                             </div>
                         </div>
                         <div className="text-right shrink-0">
