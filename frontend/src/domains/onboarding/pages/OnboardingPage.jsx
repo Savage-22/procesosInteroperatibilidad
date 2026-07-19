@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useDatos } from '../../../shared/hooks/useDatos'
+import { pedirIndicadores, pedirSipoc } from '../../../shared/services/analisisService'
 import { obtenerInventario, guardarProceso, precargarPlantilla, getErrorMessage } from '../../inventario/services/inventarioService'
-import { guardarIndicador, capturarMedicion } from '../../fichas/services/indicadoresService'
+import { guardarFicha } from '../../fichas/services/fichaProcesoService'
+import { guardarIndicador, capturarMedicion, obtenerIndicadores } from '../../fichas/services/indicadoresService'
+import SugerenciasIA from '../components/SugerenciasIA'
 import { obtenerResumen, actualizarOrganizacion, aplanarArbol } from '../services/organizacionService'
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -14,8 +17,11 @@ const PASOS = [
     { n: 2, titulo: 'Inventario', icon: 'account_tree' },
     { n: 3, titulo: 'Fichas', icon: 'description' },
     { n: 4, titulo: 'Indicadores', icon: 'insights' },
-    { n: 5, titulo: 'Listo', icon: 'check_circle' },
+    { n: 5, titulo: 'Mediciones', icon: 'timeline' },
+    { n: 6, titulo: 'Listo', icon: 'check_circle' },
 ]
+
+const ULTIMO_PASO = PASOS.length
 
 const GLOSARIO = [
     ['Proceso', 'Conjunto de actividades que transforma entradas en un producto o servicio.'],
@@ -185,10 +191,100 @@ function PasoInventario({ inventario, onPlantilla, onCrearProceso, cargandoPlant
 
 // ── Paso 3 · Fichas (Anexo 2) ─────────────────────────────────────────────────
 
-function PasoFichas({ inventario, navigate }) {
+function PasoFichas({ inventario, navigate, onGuardarFicha }) {
     const procesos = aplanarArbol(inventario?.arbol)
+    const [objetivo, setObjetivo] = useState(procesos[0]?.codigo ?? '')
+    const [guardando, setGuardando] = useState(false)
+    const [aviso, setAviso] = useState(null)
+
+    async function aplicar(sipoc, cerrar) {
+        setGuardando(true)
+        try {
+            await onGuardarFicha(objetivo, sipoc)
+            setAviso(`Ficha de ${objetivo} completada. Revísala y ajústala si hace falta.`)
+            cerrar()
+        } finally {
+            setGuardando(false)
+        }
+    }
+
     return (
         <Tarjeta titulo="Completa las fichas de proceso (Anexo 2)" descripcion="Opcional pero recomendado. Describe cada proceso con el SIPOC. Puedes hacerlo ahora o más tarde.">
+            {procesos.length > 0 && (
+                <>
+                    <div className="flex items-end gap-2 flex-wrap">
+                        <label className="block flex-1 min-w-[200px]">
+                            <span className="block text-xs font-semibold text-[#1e3654] mb-1">Proceso a caracterizar</span>
+                            <select value={objetivo} onChange={(e) => setObjetivo(e.target.value)} className={INP}>
+                                {procesos.map((p) => (
+                                    <option key={p.id} value={p.codigo}>{p.codigo} · {p.nombre}</option>
+                                ))}
+                            </select>
+                        </label>
+                    </div>
+
+                    <SugerenciasIA
+                        titulo="¿No sabes qué poner en el SIPOC?"
+                        descripcion="La IA propone proveedores, entradas, salidas, actividades y riesgos según el proceso elegido."
+                        textoBoton="Sugerir SIPOC"
+                        onPedir={() => pedirSipoc(objetivo)}
+                        deshabilitado={!objetivo}
+                        motivoDeshabilitado="Elige primero un proceso"
+                    >
+                        {({ resultado, cerrar }) => (
+                            <div className="space-y-3">
+                                <div className="grid sm:grid-cols-2 gap-2">
+                                    {[
+                                        ['Proveedores', resultado.proveedores],
+                                        ['Entradas', resultado.entradas],
+                                        ['Salidas', resultado.salidas],
+                                        ['Receptores', resultado.receptores],
+                                        ['Actividades', resultado.actividades],
+                                        ['Riesgos', resultado.riesgos],
+                                    ].map(([etiqueta, items]) => (
+                                        <div key={etiqueta} className="bg-white rounded-lg border border-gray-100 p-2">
+                                            <p className="text-[10px] uppercase tracking-wide text-gray-400">{etiqueta}</p>
+                                            <ul className="mt-0.5 space-y-0.5">
+                                                {(items ?? []).map((it, i) => (
+                                                    <li key={i} className="text-xs text-gray-600">· {it}</li>
+                                                ))}
+                                                {(items ?? []).length === 0 && <li className="text-xs text-gray-300">—</li>}
+                                            </ul>
+                                        </div>
+                                    ))}
+                                </div>
+                                {resultado.objetivo && (
+                                    <p className="text-xs text-gray-600">
+                                        <span className="font-semibold">Objetivo propuesto: </span>{resultado.objetivo}
+                                    </p>
+                                )}
+                                <div className="flex gap-2 flex-wrap">
+                                    <button
+                                        onClick={() => aplicar(resultado, cerrar)}
+                                        disabled={guardando}
+                                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-[#1f7a47] text-white hover:brightness-95 disabled:opacity-50"
+                                    >
+                                        <span className={`material-symbols-outlined text-base ${guardando ? 'animate-spin' : ''}`}>
+                                            {guardando ? 'progress_activity' : 'check'}
+                                        </span>
+                                        Usar en {objetivo}
+                                    </button>
+                                    <button onClick={cerrar} className="px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100">
+                                        Descartar
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </SugerenciasIA>
+
+                    {aviso && (
+                        <p className="flex items-center gap-2 text-sm text-[#1f7a47] bg-[#dcf8e8] rounded-lg px-3 py-2">
+                            <span className="material-symbols-outlined text-base">check_circle</span>{aviso}
+                        </p>
+                    )}
+                </>
+            )}
+
             {procesos.length === 0 ? (
                 <p className="text-sm text-gray-400">Primero crea procesos en el paso anterior.</p>
             ) : (
@@ -212,7 +308,7 @@ function PasoFichas({ inventario, navigate }) {
 
 // ── Paso 4 · Indicadores (Anexo 4) ────────────────────────────────────────────
 
-function PasoIndicadores({ inventario, onCrearIndicador, navigate }) {
+function PasoIndicadores({ inventario, onCrearIndicador, onUsarSugerencia, navigate }) {
     const procesos = aplanarArbol(inventario?.arbol)
     const [codigo, setCodigo] = useState(procesos[0]?.codigo ?? '')
     const [form, setForm] = useState({ nombre: '', sentido: 'Ascendente', unidad: '%', meta_final: '', mes: '', numerador: '', denominador: '', resultado_esperado: '' })
@@ -241,6 +337,50 @@ function PasoIndicadores({ inventario, onCrearIndicador, navigate }) {
                 <p className="text-sm text-gray-400">Primero crea procesos en el paso 2.</p>
             ) : (
                 <>
+                    <SugerenciasIA
+                        titulo="¿Qué indicadores le pongo a este proceso?"
+                        descripcion="La IA propone indicadores medibles con numerador y denominador, y su meta referencial."
+                        textoBoton="Sugerir indicadores"
+                        onPedir={() => pedirIndicadores(codigo)}
+                        deshabilitado={!codigo}
+                        motivoDeshabilitado="Elige primero un proceso"
+                    >
+                        {({ resultado, cerrar }) => (
+                            <div className="space-y-2">
+                                {(resultado.indicadores ?? []).map((ind, i) => (
+                                    <div key={i} className="bg-white rounded-lg border border-gray-100 p-3">
+                                        <div className="flex items-start justify-between gap-2 flex-wrap">
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-medium text-[#1e3654]">{ind.nombre}</p>
+                                                <p className="text-[11px] text-gray-400 mt-0.5">
+                                                    {[ind.tipo, ind.sentido, ind.unidad].filter(Boolean).join(' · ')}
+                                                    {ind.meta_final != null && ` · meta ${ind.meta_final}`}
+                                                    {ind.linea_base != null && ` · línea base ${ind.linea_base}`}
+                                                </p>
+                                                {ind.formula && (
+                                                    <p className="text-[11px] text-gray-500 mt-0.5 font-mono">{ind.formula}</p>
+                                                )}
+                                                {ind.justificacion && (
+                                                    <p className="text-[11px] text-gray-500 mt-1">{ind.justificacion}</p>
+                                                )}
+                                            </div>
+                                            <button
+                                                onClick={() => onUsarSugerencia(codigo, ind)}
+                                                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#1f7a47] text-white hover:brightness-95 shrink-0"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">add</span>
+                                                Agregar
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                <button onClick={cerrar} className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-100">
+                                    Ocultar sugerencias
+                                </button>
+                            </div>
+                        )}
+                    </SugerenciasIA>
+
                     <div className="grid sm:grid-cols-2 gap-3">
                         <label className="block">
                             <span className="block text-xs font-semibold text-[#1e3654] mb-1">Proceso *</span>
@@ -306,9 +446,149 @@ function PasoIndicadores({ inventario, onCrearIndicador, navigate }) {
     )
 }
 
-// ── Paso 5 · Listo ────────────────────────────────────────────────────────────
+// ── Paso 5 · Mediciones ───────────────────────────────────────────────────────
 
-function PasoListo({ resumen, onFinalizar, finalizando }) {
+/**
+ * Captura mes a mes de un indicador. Sin mediciones no hay semáforo, avance ni
+ * predicción, así que este paso es el que realmente enciende el tablero.
+ */
+function PasoMediciones({ inventario, onCapturar }) {
+    const procesos = aplanarArbol(inventario?.arbol).filter((p) => p.num_indicadores > 0)
+    const [codigo, setCodigo] = useState(procesos[0]?.codigo ?? '')
+    const [indicadores, setIndicadores] = useState([])
+    const [indicadorId, setIndicadorId] = useState('')
+    const [form, setForm] = useState({ mes: '', numerador: '', denominador: '', resultado_esperado: '' })
+    const [guardando, setGuardando] = useState(false)
+    const [error, setError] = useState(null)
+    const set = (c) => (e) => setForm((f) => ({ ...f, [c]: e.target.value }))
+
+    // Al cambiar de proceso se recargan sus indicadores para poder elegir uno
+    useEffect(() => {
+        let activo = true
+
+        async function cargar() {
+            if (!codigo) {
+                setIndicadores([])
+                setIndicadorId('')
+                return
+            }
+            try {
+                const lista = await obtenerIndicadores(codigo)
+                if (!activo) return
+                setIndicadores(lista)
+                setIndicadorId(lista[0]?.id ?? '')
+            } catch {
+                if (activo) setIndicadores([])
+            }
+        }
+
+        cargar()
+        return () => { activo = false }
+    }, [codigo])
+
+    const indicador = indicadores.find((i) => String(i.id) === String(indicadorId))
+
+    async function capturar() {
+        if (!indicadorId) { setError('Elige un indicador'); return }
+        if (!form.mes) { setError('Elige el mes de la medición'); return }
+        setGuardando(true); setError(null)
+        try {
+            await onCapturar(Number(indicadorId), {
+                mes: form.mes,
+                numerador: num(form.numerador),
+                denominador: num(form.denominador),
+                resultado_esperado: num(form.resultado_esperado),
+            })
+            const lista = await obtenerIndicadores(codigo)
+            setIndicadores(lista)
+            setForm({ mes: '', numerador: '', denominador: '', resultado_esperado: '' })
+        } catch (err) { setError(getErrorMessage(err)) }
+        finally { setGuardando(false) }
+    }
+
+    if (procesos.length === 0) return (
+        <Tarjeta titulo="Captura tus mediciones" descripcion="Aún no hay indicadores que medir.">
+            <p className="text-sm text-gray-400">Vuelve al paso anterior y define al menos un indicador.</p>
+        </Tarjeta>
+    )
+
+    return (
+        <Tarjeta
+            titulo="Captura tus mediciones mensuales"
+            descripcion="Cada medición alimenta el semáforo, el avance T1 y las predicciones. Registra al menos dos meses para ver tendencias."
+        >
+            <div className="grid sm:grid-cols-2 gap-3">
+                <label className="block">
+                    <span className="block text-xs font-semibold text-[#1e3654] mb-1">Proceso</span>
+                    <select value={codigo} onChange={(e) => setCodigo(e.target.value)} className={INP}>
+                        {procesos.map((p) => <option key={p.id} value={p.codigo}>{p.codigo} · {p.nombre}</option>)}
+                    </select>
+                </label>
+                <label className="block">
+                    <span className="block text-xs font-semibold text-[#1e3654] mb-1">Indicador</span>
+                    <select value={indicadorId} onChange={(e) => setIndicadorId(e.target.value)} className={INP}>
+                        {indicadores.length === 0 && <option value="">Sin indicadores</option>}
+                        {indicadores.map((i) => <option key={i.id} value={i.id}>{i.nombre}</option>)}
+                    </select>
+                </label>
+            </div>
+
+            {indicador && (
+                <p className="text-xs text-gray-500 bg-[#f8fafc] rounded-lg px-3 py-2">
+                    Meta {indicador.meta_final ?? '—'}{indicador.unidad ? ` ${indicador.unidad}` : ''} ·
+                    sentido {indicador.sentido} ·
+                    <strong className="text-[#1e3654]"> {indicador.mediciones.length} medición(es) registradas</strong>
+                </p>
+            )}
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <select value={form.mes} onChange={set('mes')} className={INP}>
+                    <option value="">Mes…</option>
+                    {MESES.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <input type="number" step="any" value={form.numerador} onChange={set('numerador')} placeholder="Numerador" className={INP} />
+                <input type="number" step="any" value={form.denominador} onChange={set('denominador')} placeholder="Denominador" className={INP} />
+                <input type="number" step="any" value={form.resultado_esperado} onChange={set('resultado_esperado')} placeholder="Esperado" className={INP} />
+            </div>
+
+            {error && <p className="text-sm text-[#9c1d1d]">{error}</p>}
+
+            <button onClick={capturar} disabled={guardando} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-[#1e3654] text-white hover:bg-[#0c2f56] disabled:opacity-50">
+                {guardando && <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>}
+                <span className="material-symbols-outlined text-base">add</span>
+                Registrar medición
+            </button>
+
+            {indicador?.mediciones.length > 0 && (
+                <div className="bg-[#f8fafc] rounded-lg p-3">
+                    <p className="text-xs font-semibold text-gray-500 mb-2">Mediciones de este indicador</p>
+                    <ul className="space-y-1">
+                        {indicador.mediciones.map((m) => (
+                            <li key={m.id} className="flex items-center justify-between text-xs text-gray-600">
+                                <span>{m.mes}</span>
+                                <span>
+                                    obtenido <strong className="text-[#1e3654]">{m.resultado_obtenido ?? '—'}</strong>
+                                    {m.avance_t1 !== null && ` · avance ${m.avance_t1.toFixed(1)}%`}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </Tarjeta>
+    )
+}
+
+// ── Paso 6 · Listo ────────────────────────────────────────────────────────────
+
+const SIGUIENTES_PASOS = [
+    ['/tablero', 'monitoring', 'Tablero de control', 'Monitorea cada indicador contra su meta'],
+    ['/anexos', 'description', 'Anexos', 'Genera y descarga los Anexos 1, 2 y 4'],
+    ['/resultados', 'analytics', 'Resultados', 'Analiza resultados y aplica mejoras'],
+    ['/bitacora', 'route', 'Bitácora', 'Revisa el avance de todo el trabajo'],
+]
+
+function PasoListo({ resumen, onFinalizar, finalizando, navigate }) {
     const c = resumen?.conteos ?? {}
     const items = [
         ['Procesos', c.procesos, 'account_tree'],
@@ -316,6 +596,8 @@ function PasoListo({ resumen, onFinalizar, finalizando }) {
         ['Indicadores', c.indicadores, 'insights'],
         ['Mediciones', c.mediciones, 'timeline'],
     ]
+    const sinMediciones = (c.mediciones ?? 0) === 0
+
     return (
         <Tarjeta titulo="¡Todo listo!" descripcion="Con esto tu dashboard y las vistas de análisis quedan operativas.">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -327,10 +609,37 @@ function PasoListo({ resumen, onFinalizar, finalizando }) {
                     </div>
                 ))}
             </div>
+
+            {sinMediciones && (
+                <p className="flex items-center gap-2 text-sm text-[#854d0e] bg-[#fef9c3] rounded-lg px-3 py-2">
+                    <span className="material-symbols-outlined text-base">info</span>
+                    Sin mediciones el tablero queda vacío. Vuelve al paso 5 y registra al menos una.
+                </p>
+            )}
+
+            <div>
+                <p className="text-xs font-semibold text-gray-500 mb-2">¿Y ahora qué?</p>
+                <div className="grid sm:grid-cols-2 gap-2">
+                    {SIGUIENTES_PASOS.map(([ruta, icono, titulo, desc]) => (
+                        <button
+                            key={ruta}
+                            onClick={() => navigate(ruta)}
+                            className="flex items-start gap-2 text-left p-3 rounded-lg border border-gray-100 hover:border-[#1e3654]/30 hover:bg-[#f8fafc] transition-colors"
+                        >
+                            <span className="material-symbols-outlined text-[#1e3654] text-xl shrink-0">{icono}</span>
+                            <div>
+                                <p className="text-sm font-medium text-[#1e3654]">{titulo}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             <button onClick={onFinalizar} disabled={finalizando} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-[#1f7a47] text-white hover:brightness-95 disabled:opacity-50">
                 {finalizando && <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>}
                 <span className="material-symbols-outlined text-base">dashboard</span>
-                Ir al dashboard
+                Terminar e ir al dashboard
             </button>
         </Tarjeta>
     )
@@ -401,6 +710,44 @@ export default function OnboardingPage() {
         refrescar()
     }
 
+    // Alta directa de un indicador propuesto por la IA, con sus campos ya resueltos
+    async function handleUsarSugerencia(codigo, sugerido) {
+        await guardarIndicador(codigo, {
+            nombre: sugerido.nombre,
+            tipo: sugerido.tipo ?? null,
+            sentido: sugerido.sentido ?? 'Ascendente',
+            unidad: sugerido.unidad ?? null,
+            formula: sugerido.formula ?? null,
+            fuente: sugerido.fuente ?? null,
+            meta_final: sugerido.meta_final ?? null,
+            linea_base: sugerido.linea_base ?? null,
+        })
+        await recargar()
+        refrescar()
+    }
+
+    async function handleGuardarFicha(codigo, sipoc) {
+        await guardarFicha(codigo, {
+            tipo: sipoc.tipo ?? null,
+            objetivo: sipoc.objetivo ?? null,
+            proveedores: sipoc.proveedores ?? [],
+            entradas: sipoc.entradas ?? [],
+            salidas: sipoc.salidas ?? [],
+            receptores: sipoc.receptores ?? [],
+            actividades: sipoc.actividades ?? [],
+            riesgos: sipoc.riesgos ?? [],
+            registros: sipoc.registros ?? [],
+        })
+        await recargar()
+        refrescar()
+    }
+
+    async function handleCapturarMedicion(indicadorId, medicion) {
+        await capturarMedicion(indicadorId, medicion)
+        await recargar()
+        refrescar()
+    }
+
     async function handleFinalizar() {
         setSaving(true)
         try {
@@ -417,6 +764,15 @@ export default function OnboardingPage() {
     )
 
     const procesos = aplanarArbol(inventario?.arbol)
+
+    // Un paso solo bloquea el avance cuando sin él los siguientes no tienen
+    // sentido: sin procesos no hay qué caracterizar, sin indicadores no hay qué medir.
+    const bloqueo =
+        paso === 2 && procesos.length === 0
+            ? 'Agrega al menos un proceso para continuar'
+            : paso === 4 && (resumen?.conteos?.indicadores ?? 0) === 0
+                ? 'Define al menos un indicador para poder capturar mediciones'
+                : null
 
     return (
         <div className="max-w-3xl mx-auto space-y-6">
@@ -435,9 +791,10 @@ export default function OnboardingPage() {
 
             {paso === 1 && <PasoOrganizacion resumen={resumen} onGuardar={handleGuardarOrg} guardando={saving} />}
             {paso === 2 && <PasoInventario inventario={inventario} onPlantilla={handlePlantilla} onCrearProceso={handleCrearProceso} cargandoPlantilla={cargandoPlantilla} />}
-            {paso === 3 && <PasoFichas inventario={inventario} navigate={navigate} />}
-            {paso === 4 && <PasoIndicadores inventario={inventario} onCrearIndicador={handleCrearIndicador} navigate={navigate} />}
-            {paso === 5 && <PasoListo resumen={resumen} onFinalizar={handleFinalizar} finalizando={saving} />}
+            {paso === 3 && <PasoFichas inventario={inventario} navigate={navigate} onGuardarFicha={handleGuardarFicha} />}
+            {paso === 4 && <PasoIndicadores inventario={inventario} onCrearIndicador={handleCrearIndicador} onUsarSugerencia={handleUsarSugerencia} navigate={navigate} />}
+            {paso === 5 && <PasoMediciones inventario={inventario} onCapturar={handleCapturarMedicion} />}
+            {paso === 6 && <PasoListo resumen={resumen} onFinalizar={handleFinalizar} finalizando={saving} navigate={navigate} />}
 
             {/* Navegación */}
             {paso > 1 && (
@@ -445,11 +802,11 @@ export default function OnboardingPage() {
                     <button onClick={() => setPaso((p) => Math.max(1, p - 1))} className="flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">
                         <span className="material-symbols-outlined text-base">arrow_back</span> Atrás
                     </button>
-                    {paso < 5 && (
+                    {paso < ULTIMO_PASO && (
                         <button
-                            onClick={() => setPaso((p) => Math.min(5, p + 1))}
-                            disabled={paso === 2 && procesos.length === 0}
-                            title={paso === 2 && procesos.length === 0 ? 'Agrega al menos un proceso para continuar' : ''}
+                            onClick={() => setPaso((p) => Math.min(ULTIMO_PASO, p + 1))}
+                            disabled={bloqueo !== null}
+                            title={bloqueo ?? ''}
                             className="flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium bg-[#1e3654] text-white hover:bg-[#0c2f56] disabled:opacity-40"
                         >
                             Siguiente <span className="material-symbols-outlined text-base">arrow_forward</span>

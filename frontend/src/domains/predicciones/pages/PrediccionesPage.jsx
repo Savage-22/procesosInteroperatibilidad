@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 
+import PanelAnalisisIA from '../../../shared/components/PanelAnalisisIA'
 import { useDatos } from '../../../shared/hooks/useDatos'
 import KpiCard from '../../dashboard/components/KpiCard'
 import EstadoMetaBadge from '../components/EstadoMetaBadge'
@@ -154,6 +155,12 @@ export default function PrediccionesPage() {
                     </table>
                 </div>
             </div>
+
+            <PanelAnalisisIA
+                seccion="predicciones"
+                titulo="Análisis de las proyecciones"
+                descripcion="La IA evalúa qué procesos no llegarán a la meta y cuánto margen de corrección queda."
+            />
         </div>
     )
 }

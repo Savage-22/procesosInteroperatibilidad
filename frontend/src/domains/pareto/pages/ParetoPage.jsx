@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 
+import PanelAnalisisIA from '../../../shared/components/PanelAnalisisIA'
 import SemaforoBadge from '../../../shared/components/SemaforoBadge'
 import { useDatos } from '../../../shared/hooks/useDatos'
 import ParetoChart from '../components/ParetoChart'
@@ -137,6 +138,12 @@ export default function ParetoPage() {
                     </table>
                 </div>
             </div>
+
+            <PanelAnalisisIA
+                seccion="pareto"
+                titulo="Análisis del Pareto"
+                descripcion="La IA interpreta el grupo crítico y sugiere dónde concentrar los recursos."
+            />
         </div>
     )
 }

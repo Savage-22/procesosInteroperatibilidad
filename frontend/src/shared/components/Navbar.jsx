@@ -6,17 +6,27 @@ import BotonCargarExcel from './BotonCargarExcel'
 import BotonPlantilla from './BotonPlantilla'
 
 // label: texto en móvil — short: texto en desktop (más corto para que quepa)
-const LINKS = [
-    { to: '/',             label: 'Dashboard',    short: 'Dashboard',  icon: 'dashboard'      },
-    { to: '/onboarding',   label: 'Empezar de 0', short: 'Asistente',  icon: 'rocket_launch'  },
-    { to: '/hoja-de-ruta', label: 'Hoja de Ruta', short: 'Guía',       icon: 'route'          },
+// Con 12 secciones ya no caben todas en la barra: las principales quedan
+// visibles y el resto se agrupa bajo "Más". En móvil se listan todas.
+const PRINCIPALES = [
+    { to: '/',             label: 'Dashboard',          short: 'Dashboard',  icon: 'dashboard'    },
+    { to: '/tablero',      label: 'Tablero de control', short: 'Tablero',    icon: 'monitoring'   },
+    { to: '/resultados',   label: 'Resultados',         short: 'Resultados', icon: 'analytics'    },
+    { to: '/anexos',       label: 'Anexos',             short: 'Anexos',     icon: 'description'  },
+    { to: '/bitacora',     label: 'Bitácora',           short: 'Bitácora',   icon: 'route'        },
+    { to: '/onboarding',   label: 'Empezar de 0',       short: 'Asistente',  icon: 'rocket_launch'},
+]
+
+const SECUNDARIOS = [
     { to: '/inventario',   label: 'Inventario',   short: 'Inventario', icon: 'account_tree'   },
     { to: '/objetivos',    label: 'Objetivos',    short: 'Objetivos',  icon: 'flag'           },
     { to: '/comparativa',  label: 'Comparativa',  short: 'Comparativa',icon: 'compare_arrows' },
-    { to: '/pareto',       label: 'Pareto',        short: 'Pareto',     icon: 'bar_chart'      },
+    { to: '/pareto',       label: 'Pareto',       short: 'Pareto',     icon: 'bar_chart'      },
     { to: '/predicciones', label: 'Predicciones', short: 'Predicción', icon: 'insights'       },
     { to: '/metodologia',  label: 'Metodología',  short: 'Metodología',icon: 'menu_book'      },
 ]
+
+const LINKS = [...PRINCIPALES, ...SECUNDARIOS]
 
 function formatearHora(iso) {
     if (!iso) return null
@@ -25,26 +35,58 @@ function formatearHora(iso) {
     return fecha.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
 }
 
-/* ── Desktop: icono + label corto ──────────────────────────────── */
+const CLASE_LINK = ({ isActive }) =>
+    `flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+        isActive ? 'bg-[#f4d100] text-[#1e3654]' : 'text-white/80 hover:text-white hover:bg-white/10'
+    }`
+
+/* ── Desktop: principales visibles + resto bajo "Más" ──────────── */
 function NavLinksDesktop() {
-    return LINKS.map(({ to, label, short, icon }) => (
-        <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            title={label}
-            className={({ isActive }) =>
-                `flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
-                    isActive
-                        ? 'bg-[#f4d100] text-[#1e3654]'
-                        : 'text-white/80 hover:text-white hover:bg-white/10'
-                }`
-            }
-        >
-            <span className="material-symbols-outlined text-base">{icon}</span>
-            {short}
-        </NavLink>
-    ))
+    const [abierto, setAbierto] = useState(false)
+
+    return (
+        <>
+            {PRINCIPALES.map(({ to, label, short, icon }) => (
+                <NavLink key={to} to={to} end={to === '/'} title={label} className={CLASE_LINK}>
+                    <span className="material-symbols-outlined text-base">{icon}</span>
+                    {short}
+                </NavLink>
+            ))}
+
+            <div className="relative">
+                <button
+                    onClick={() => setAbierto((p) => !p)}
+                    onBlur={() => setTimeout(() => setAbierto(false), 150)}
+                    className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-white/80 hover:text-white hover:bg-white/10 transition-colors whitespace-nowrap"
+                >
+                    <span className="material-symbols-outlined text-base">more_horiz</span>
+                    Más
+                </button>
+
+                {abierto && (
+                    <div className="absolute right-0 top-full mt-1 w-52 bg-[#1a2f4a] rounded-xl shadow-xl border border-white/10 p-1.5 flex flex-col gap-0.5 z-50">
+                        {SECUNDARIOS.map(({ to, label, icon }) => (
+                            <NavLink
+                                key={to}
+                                to={to}
+                                onClick={() => setAbierto(false)}
+                                className={({ isActive }) =>
+                                    `flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                                        isActive
+                                            ? 'bg-[#f4d100] text-[#1e3654]'
+                                            : 'text-white/80 hover:text-white hover:bg-white/10'
+                                    }`
+                                }
+                            >
+                                <span className="material-symbols-outlined text-base">{icon}</span>
+                                {label}
+                            </NavLink>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </>
+    )
 }
 
 /* ── Móvil: icono + label completo ─────────────────────────────── */

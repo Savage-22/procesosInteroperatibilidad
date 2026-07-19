@@ -1,12 +1,11 @@
 import logging
-import os
 
 from fastapi import APIRouter, HTTPException
-from openai import OpenAI
 from pydantic import BaseModel
 
 from modules.procesos.application.proceso_service import ProcesoService
 from modules.procesos.infrastructure.excel_reader import ExcelStore
+from shared.ia import ErrorIA, IANoConfigurada, completar
 from shared.semaforo import calcular_semaforo
 
 logger = logging.getLogger(__name__)
@@ -75,34 +74,19 @@ def _construir_contexto() -> str:
 
 @router.post("/api/chat")
 async def chat(req: MensajeRequest):
-    api_key = os.getenv("DEEPSEEK_API_KEY")
-    if not api_key:
-        raise HTTPException(
-            status_code=503,
-            detail="El asistente IA no está configurado. Contacta al administrador.",
-        )
-
-    client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
     contexto = _construir_contexto()
 
-    messages = [{"role": "system", "content": f"{_SYSTEM_PROMPT}\n\n{contexto}"}]
-
+    mensajes = []
     if req.historial:
         for msg in req.historial[-8:]:
             role = "user" if msg.get("rol") == "user" else "assistant"
-            messages.append({"role": role, "content": msg.get("contenido", "")})
-
-    messages.append({"role": "user", "content": req.mensaje})
+            mensajes.append({"role": role, "content": msg.get("contenido", "")})
+    mensajes.append({"role": "user", "content": req.mensaje})
 
     try:
-        response = client.chat.completions.create(
-            model="deepseek-chat",
-            messages=messages,
-            max_tokens=800,
-            temperature=0.7,
-        )
-        respuesta = response.choices[0].message.content
-        return {"success": True, "data": {"respuesta": respuesta}}
-    except Exception as e:
-        logger.error("Error llamando a DeepSeek: %s", e)
-        raise HTTPException(status_code=502, detail="Error al contactar el servicio de IA.")
+        respuesta = completar(f"{_SYSTEM_PROMPT}\n\n{contexto}", mensajes)
+    except IANoConfigurada as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except ErrorIA as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    return {"success": True, "data": {"respuesta": respuesta}}

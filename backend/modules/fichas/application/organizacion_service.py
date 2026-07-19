@@ -88,18 +88,23 @@ class OrganizacionService:
             "estado_onboarding": org.estado_onboarding,
             "tiene_datos": conteos["mediciones"] > 0 or conteos["procesos"] > 0,
             "conteos": conteos,
-            # Paso sugerido para retomar el asistente (1..5)
+            # Paso sugerido para retomar el asistente (1..6)
             "paso_sugerido": OrganizacionService._paso_sugerido(org, conteos),
         }
 
     @staticmethod
     def _paso_sugerido(org: Organizacion, conteos: dict) -> int:
+        """
+        Dónde retomar el asistente: el primer paso cuyo producto todavía falta.
+        Pasos: 1 organización · 2 inventario · 3 fichas · 4 indicadores ·
+        5 mediciones · 6 cierre.
+        """
         if org.estado_onboarding == "completado":
-            return 5
+            return 6
         if conteos["procesos"] == 0:
             return 1 if org.nombre == ORG_DEFAULT else 2
         if conteos["indicadores"] == 0:
             return 3
         if conteos["mediciones"] == 0:
-            return 4
-        return 5
+            return 5
+        return 6
