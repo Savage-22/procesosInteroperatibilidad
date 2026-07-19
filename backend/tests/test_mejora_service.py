@@ -222,3 +222,46 @@ def test_alerta_sugiere_ishikawa_si_no_hay_diagnostico(session, proceso):
     alerta = next(a for a in data["alertas"] if a["codigo"] == "M3.6")
     assert alerta["sugerencia"]["tab"] == "ishikawa"
     assert "sin análisis de mejora registrado" in alerta["motivos"]
+
+
+def _proceso_medido_en(session, codigo, mes, obtenido, meta=90):
+    InventarioService.crear(session, {"codigo": codigo, "nombre": f"Proc {codigo}"})
+    ind = IndicadorService.crear(session, codigo, {"nombre": "% x", "sentido": "Ascendente", "unidad": "%", "meta_final": meta})
+    IndicadorService.guardar_medicion(session, ind["id"], {"mes": mes, "numerador": obtenido, "denominador": 100, "resultado_esperado": meta})
+    return ind
+
+
+# ── Evaluación semestral por mes de corte (periodo Ene–Jun) ───────────────────
+
+def test_alerta_reporta_periodo_y_mes_corte(session, proceso):
+    _proceso_con_avance(session, "M3.7", obtenido=50)  # medición en Junio
+    data = AlertasMejoraService.evaluar(session)
+    assert data["periodo"]["etiqueta"] == "Enero–Junio"
+    assert next(a for a in data["alertas"] if a["codigo"] == "M3.7")["mes_corte"] == "Junio"
+
+
+def test_alerta_ignora_meses_fuera_del_periodo(session, proceso):
+    # Única medición en Julio (fuera de S1) → proceso no evaluable, sin alerta
+    InventarioService.crear(session, {"codigo": "M3.8", "nombre": "Proc M3.8"})
+    ind = IndicadorService.crear(session, "M3.8", {"nombre": "% x", "sentido": "Ascendente", "unidad": "%", "meta_final": 90})
+    IndicadorService.guardar_medicion(session, ind["id"], {"mes": "Julio", "numerador": 50, "denominador": 100, "resultado_esperado": 90})
+    data = AlertasMejoraService.evaluar(session)  # S1 = Ene–Jun
+    assert "M3.8" not in [a["codigo"] for a in data["alertas"]]
+
+
+def test_corte_toma_ultimo_mes_con_dato_y_no_alerta_si_cumple(session, proceso):
+    # Enero en rojo pero Mayo ya llegó a la meta → el corte es Mayo → sin alerta
+    InventarioService.crear(session, {"codigo": "M3.9", "nombre": "Proc M3.9"})
+    ind = IndicadorService.crear(session, "M3.9", {"nombre": "% x", "sentido": "Ascendente", "unidad": "%", "meta_final": 90})
+    IndicadorService.guardar_medicion(session, ind["id"], {"mes": "Enero", "numerador": 40, "denominador": 100, "resultado_esperado": 90})
+    IndicadorService.guardar_medicion(session, ind["id"], {"mes": "Mayo", "numerador": 95, "denominador": 100, "resultado_esperado": 90})
+    data = AlertasMejoraService.evaluar(session)
+    assert "M3.9" not in [a["codigo"] for a in data["alertas"]]
+
+
+def test_evaluar_periodo_s2(session, proceso):
+    _proceso_medido_en(session, "M4.9", "Agosto", obtenido=50)  # Agosto ∈ S2
+    data = AlertasMejoraService.evaluar(session, "S2")
+    assert data["periodo"]["etiqueta"] == "Julio–Diciembre"
+    alerta = next(a for a in data["alertas"] if a["codigo"] == "M4.9")
+    assert alerta["mes_corte"] == "Agosto"

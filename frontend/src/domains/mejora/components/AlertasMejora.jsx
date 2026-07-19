@@ -52,14 +52,19 @@ export default function AlertasMejora() {
 
     if (error || !datos) return null  // no estorbar el dashboard si falla o aún carga
 
-    const { resumen, alertas } = datos
+    const { resumen, alertas, periodo } = datos
 
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="p-5 border-b border-gray-100 flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-[#1f7a47]">notifications_active</span>
-                    <h2 className="text-base font-semibold text-[#1e3654]">Procesos que deberían mejorar</h2>
+                    <div>
+                        <h2 className="text-base font-semibold text-[#1e3654]">Procesos que deberían mejorar</h2>
+                        {periodo && (
+                            <p className="text-xs text-gray-400">Evaluado al cierre del semestre · {periodo.etiqueta}</p>
+                        )}
+                    </div>
                 </div>
                 {resumen.total > 0 && (
                     <p className="text-xs text-gray-500">
