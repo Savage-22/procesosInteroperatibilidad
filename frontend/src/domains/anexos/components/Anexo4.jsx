@@ -67,7 +67,7 @@ function FichaIndicador({ indicador, numero }) {
                                         <td className="px-2 py-1.5 text-right text-gray-500">{val(m.resultado_esperado)}</td>
                                         <td className="px-2 py-1.5 text-right font-semibold text-[#1e3654]">{val(m.resultado_obtenido)}</td>
                                         <td className="px-2 py-1.5 text-right text-gray-700">
-                                            {m.avance_t1 === null ? '—' : `${m.avance_t1.toFixed(1)}%`}
+                                            {m.avance_t1 == null ? '—' : `${m.avance_t1.toFixed(1)}%`}
                                         </td>
                                         <td className="px-2 py-1.5"><SemaforoBadge semaforo={m.semaforo} /></td>
                                     </tr>

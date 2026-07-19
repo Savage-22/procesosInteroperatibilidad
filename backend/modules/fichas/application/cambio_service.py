@@ -50,6 +50,8 @@ class CambioService:
         total = len(acciones)
         hechas = sum(1 for a in acciones if a.estado == "hecho")
         return {
+            "codigo": proceso.codigo,
+            "proceso": proceso.nombre,
             "etapas": ETAPAS,
             "info": ETAPAS_INFO,
             "estados": ESTADOS_CAMBIO,

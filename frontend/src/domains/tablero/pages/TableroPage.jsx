@@ -7,6 +7,7 @@ import TablaMonitoreo from '../components/TablaMonitoreo'
 import { obtenerTablero, porcentaje, getErrorMessage } from '../services/tableroService'
 
 const PERIODOS = [
+    { clave: 'ANUAL', texto: 'Todo el año' },
     { clave: 'S1', texto: 'S1 · Ene–Jun' },
     { clave: 'S2', texto: 'S2 · Jul–Dic' },
 ]

@@ -74,6 +74,29 @@ def sugerir_causas(codigo: str, session: Session = Depends(get_session)):
     return _manejar(lambda: AnalisisService.sugerir_causas(session, codigo))
 
 
+class MejoraPropuesta(BaseModel):
+    causas: list[dict] = []
+    oportunidades: list[dict] = []
+    cambio: list[dict] = []
+    proyeccion: dict | None = None
+
+
+@router.post("/mejora/{codigo}")
+def completar_mejora(codigo: str, session: Session = Depends(get_session)):
+    """Propone las 4 partes de la mejora (Ishikawa, oportunidades, Antes/Después, Lewin)."""
+    return _manejar(lambda: AnalisisService.completar_mejora(session, codigo))
+
+
+@router.post("/mejora/{codigo}/aplicar")
+def aplicar_mejora(
+    codigo: str,
+    propuesta: MejoraPropuesta,
+    session: Session = Depends(get_session),
+):
+    """Persiste la propuesta de mejora ya revisada por el usuario."""
+    return _manejar(lambda: AnalisisService.aplicar_mejora(session, codigo, propuesta.model_dump()))
+
+
 @router.post("/explicar")
 def explicar(datos: PreguntaEntrada, session: Session = Depends(get_session)):
     return _manejar(

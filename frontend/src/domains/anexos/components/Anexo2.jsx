@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 import HojaAnexo from './HojaAnexo'
 
 const COLUMNAS_SIPOC = [
@@ -67,10 +69,19 @@ export default function Anexo2({ anexo }) {
     return (
         <HojaAnexo anexo={anexo} pie={pie}>
             {!anexo.tiene_ficha && (
-                <p className="flex items-center gap-2 text-xs text-[#854d0e] bg-[#fef9c3] rounded-lg px-3 py-2 no-print">
+                <div className="flex items-center gap-2 flex-wrap text-xs text-[#854d0e] bg-[#fef9c3] rounded-lg px-3 py-2 no-print">
                     <span className="material-symbols-outlined text-base">info</span>
-                    Este proceso aún no tiene ficha SIPOC completada; el anexo se emite con los campos vacíos.
-                </p>
+                    <span>
+                        Este proceso aún no tiene ficha SIPOC completada; el anexo se emite con los campos vacíos.
+                    </span>
+                    <Link
+                        to={`/proceso/${p.codigo}/ficha`}
+                        className="ml-auto inline-flex items-center gap-1 font-semibold text-[#1e3654] hover:underline"
+                    >
+                        Completar ficha (con ayuda de IA)
+                        <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                    </Link>
+                </div>
             )}
 
             {/* Identificación */}

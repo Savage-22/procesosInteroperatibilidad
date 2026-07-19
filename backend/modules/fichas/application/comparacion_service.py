@@ -105,12 +105,21 @@ class ComparacionService:
                     "semaforo": calcular_semaforo(avance_meta(valor)),
                 })
 
+        # Cumplimiento del compromiso mensual, promediado: es el semáforo con el
+        # que se juzga al indicador en el tablero, el dashboard y el Pareto. Se
+        # expone aparte del avance contra la meta final, que es lo que mide el
+        # Antes/Después (cuánta brecha cierra la mejora).
+        avances_t1 = [r["avance_t1"] for r in reales if r["avance_t1"] is not None]
+        avance_t1 = round(sum(avances_t1) / len(avances_t1), 1) if avances_t1 else None
+
         return {
             "id": indicador.id,
             "nombre": indicador.nombre,
             "unidad": indicador.unidad,
             "meta_final": meta,
             "es_descendente": es_descendente,
+            "avance_t1": avance_t1,
+            "semaforo_t1": calcular_semaforo(avance_t1),
             "tiene_proyeccion": bool(proyectados),
             "real": reales,
             "proyeccion": proyectados,
@@ -147,6 +156,7 @@ class ComparacionService:
     @staticmethod
     def _serie_real(session: Session, indicador: FichaIndicador) -> list[dict]:
         unidad = indicador.unidad or ""
+        es_descendente = "descendente" in (indicador.sentido or "Ascendente").lower()
         mediciones = session.exec(
             select(Medicion).where(Medicion.indicador_id == indicador.id)
         ).all()
@@ -156,7 +166,17 @@ class ComparacionService:
             valor = derivar_obtenido(m.numerador, m.denominador, unidad, m.resultado_obtenido)
             if valor is None:
                 continue
-            serie.append({"mes": m.mes, "anio": m.anio, "valor": valor})
+            serie.append({
+                "mes": m.mes,
+                "anio": m.anio,
+                "valor": valor,
+                "esperado": m.resultado_esperado,
+                # Avance T1 del mes (obtenido vs. esperado): es el criterio con
+                # el que el resto del sistema pinta el semáforo del indicador.
+                "avance_t1": ProcesoService.calcular_avance_t1(
+                    valor, m.resultado_esperado, es_descendente
+                ),
+            })
         return serie
 
     @staticmethod

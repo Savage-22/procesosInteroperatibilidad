@@ -25,6 +25,14 @@ export async function sugerirCausas(codigo) {
     return (await httpClient.post(`/api/analisis/sugerir/causas/${codigo}`)).data
 }
 
+export async function completarMejora(codigo) {
+    return (await httpClient.post(`/api/analisis/mejora/${codigo}`)).data
+}
+
+export async function aplicarMejora(codigo, propuesta) {
+    return (await httpClient.post(`/api/analisis/mejora/${codigo}/aplicar`, propuesta)).data
+}
+
 export async function explicar(datos) {
     return (await httpClient.post('/api/analisis/explicar', datos)).data
 }

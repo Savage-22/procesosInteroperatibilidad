@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 
 import PanelAnalisisIA from '../../../shared/components/PanelAnalisisIA'
+import CompletarMejoraIA from '../components/CompletarMejoraIA'
 import IshikawaTab from '../components/IshikawaTab'
 import OportunidadesTab from '../components/OportunidadesTab'
 import ComparacionTab from '../components/ComparacionTab'
@@ -20,6 +21,9 @@ export default function MejoraPage() {
     const [searchParams] = useSearchParams()
     const tabInicial = TABS.some((t) => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'ishikawa'
     const [tab, setTab] = useState(tabInicial)
+    // Se incrementa al aplicar la mejora con IA: remonta las pestañas para que
+    // recarguen lo recién guardado sin que el usuario tenga que refrescar.
+    const [version, setVersion] = useState(0)
 
     return (
         <div className="space-y-6">
@@ -46,10 +50,12 @@ export default function MejoraPage() {
                 ))}
             </div>
 
-            {tab === 'ishikawa' && <IshikawaTab codigo={codigo} />}
-            {tab === 'oportunidades' && <OportunidadesTab codigo={codigo} />}
-            {tab === 'comparacion' && <ComparacionTab codigo={codigo} />}
-            {tab === 'cambio' && <CambioTab codigo={codigo} />}
+            <CompletarMejoraIA codigo={codigo} onAplicado={() => setVersion((v) => v + 1)} />
+
+            {tab === 'ishikawa' && <IshikawaTab key={version} codigo={codigo} />}
+            {tab === 'oportunidades' && <OportunidadesTab key={version} codigo={codigo} />}
+            {tab === 'comparacion' && <ComparacionTab key={version} codigo={codigo} />}
+            {tab === 'cambio' && <CambioTab key={version} codigo={codigo} />}
 
             <PanelAnalisisIA
                 seccion="mejora"

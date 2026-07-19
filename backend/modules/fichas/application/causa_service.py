@@ -28,6 +28,8 @@ class CausaService:
             por_categoria.setdefault(c.categoria, []).append(CausaService._serializar(c))
 
         return {
+            "codigo": proceso.codigo,
+            "proceso": proceso.nombre,
             "categorias": CATEGORIAS_6M,
             "ishikawa": por_categoria,
             "pareto": CausaService._pareto(causas),

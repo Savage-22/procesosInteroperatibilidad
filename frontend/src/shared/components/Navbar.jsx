@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 
 import { useDatos } from '../hooks/useDatos'
@@ -43,6 +43,21 @@ const CLASE_LINK = ({ isActive }) =>
 /* ── Desktop: principales visibles + resto bajo "Más" ──────────── */
 function NavLinksDesktop() {
     const [abierto, setAbierto] = useState(false)
+    const contenedor = useRef(null)
+
+    // Cierra el menú al hacer clic fuera de él. Se evita cerrarlo con el `blur`
+    // del botón + setTimeout, cuya carrera a veces se tragaba el clic en un
+    // enlace y hacía que "no llevara a ningún lado".
+    useEffect(() => {
+        if (!abierto) return
+        function alClicarFuera(e) {
+            if (contenedor.current && !contenedor.current.contains(e.target)) {
+                setAbierto(false)
+            }
+        }
+        document.addEventListener('mousedown', alClicarFuera)
+        return () => document.removeEventListener('mousedown', alClicarFuera)
+    }, [abierto])
 
     return (
         <>
@@ -53,10 +68,9 @@ function NavLinksDesktop() {
                 </NavLink>
             ))}
 
-            <div className="relative">
+            <div className="relative" ref={contenedor}>
                 <button
                     onClick={() => setAbierto((p) => !p)}
-                    onBlur={() => setTimeout(() => setAbierto(false), 150)}
                     className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-white/80 hover:text-white hover:bg-white/10 transition-colors whitespace-nowrap"
                 >
                     <span className="material-symbols-outlined text-base">more_horiz</span>

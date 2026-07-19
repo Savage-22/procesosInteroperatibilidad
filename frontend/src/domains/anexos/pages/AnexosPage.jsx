@@ -77,11 +77,15 @@ export default function AnexosPage() {
         return () => { activo = false }
     }, [version])
 
-    // Al elegir un anexo por proceso sin proceso seleccionado, toma el primero válido
+    // Al elegir un anexo por proceso sin proceso seleccionado, toma el primero
+    // con datos; si ninguno los tiene, el primer proceso no-macroproceso.
     useEffect(() => {
         if (!indice || !requiereProceso(numero) || codigo) return
         const campo = numero === 2 ? 'tiene_ficha' : 'tiene_indicadores'
-        const candidato = indice.procesos.find((p) => p[campo]) ?? indice.procesos[0]
+        const candidato =
+            indice.procesos.find((p) => p[campo]) ??
+            indice.procesos.find((p) => p.nivel > 0) ??
+            indice.procesos[0]
         if (candidato) actualizar({ proceso: candidato.codigo })
     }, [indice, numero, codigo, actualizar])
 
@@ -94,7 +98,10 @@ export default function AnexosPage() {
             setCargandoDoc(true)
             try {
                 const data = await obtenerAnexo(numero, codigo)
-                if (activo) { setDocumento(data); setError(null) }
+                // Se etiqueta con su anexo+proceso: así el render nunca entrega
+                // a una vista el documento con la forma de otro anexo (evita, p.ej.,
+                // pintar el Anexo 4 con los datos del Anexo 1 durante el cambio).
+                if (activo) { setDocumento({ clave: `${numero}|${codigo}`, datos: data }); setError(null) }
             } catch (err) {
                 if (activo) { setDocumento(null); setError(getErrorMessage(err)) }
             } finally {
@@ -125,6 +132,9 @@ export default function AnexosPage() {
     )
 
     const Vista = VISTAS[numero]
+    // Solo se usa el documento si corresponde al anexo/proceso en pantalla.
+    const claveActual = `${numero}|${requiereProceso(numero) ? codigo : ''}`
+    const doc = documento?.clave === claveActual ? documento.datos : null
     const procesosVista = numero === 2
         ? indice.procesos
         : indice.procesos.filter((p) => p.tiene_indicadores || p.codigo === codigo)
@@ -140,7 +150,7 @@ export default function AnexosPage() {
                 </div>
                 <button
                     onClick={() => window.print()}
-                    disabled={!documento}
+                    disabled={!doc}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-[#1e3654] text-white hover:bg-[#0c2f56] disabled:opacity-50"
                 >
                     <span className="material-symbols-outlined text-base">picture_as_pdf</span>
@@ -186,16 +196,16 @@ export default function AnexosPage() {
                 </p>
             )}
 
-            {cargandoDoc && !documento && (
+            {cargandoDoc && !doc && (
                 <div className="flex items-center justify-center h-40 gap-2 text-gray-500">
                     <span className="material-symbols-outlined animate-spin">progress_activity</span>
                     Generando el anexo…
                 </div>
             )}
 
-            {documento && Vista && (
+            {doc && Vista && (
                 <div className="zona-imprimible">
-                    <Vista anexo={documento} />
+                    <Vista anexo={doc} />
                 </div>
             )}
         </div>

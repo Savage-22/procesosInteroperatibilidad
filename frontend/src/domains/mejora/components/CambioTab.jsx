@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 
 import { obtenerCambio, guardarAccionCambio, borrarAccionCambio, getErrorMessage } from '../services/mejoraService'
+import InformeLewin from './InformeLewin'
 
 const INP = 'w-full px-2 py-1.5 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3654]/20'
 
@@ -116,6 +117,7 @@ function EtapaColumna({ etapa, info, acciones, onAgregar, onEstado, onEliminar }
 export default function CambioTab({ codigo }) {
     const [datos, setDatos] = useState(null)
     const [error, setError] = useState(null)
+    const [verInforme, setVerInforme] = useState(false)
 
     async function cargar() {
         try { setDatos(await obtenerCambio(codigo)); setError(null) }
@@ -140,25 +142,52 @@ export default function CambioTab({ codigo }) {
 
     return (
         <div className="space-y-5">
-            <p className="text-sm text-gray-500">
-                Gestiona el cambio con el modelo de <strong>Kurt Lewin</strong>: <strong>Descongelar</strong> (preparar) →
-                <strong> Cambiar</strong> (implementar) → <strong>Recongelar</strong> (consolidar). Registra acciones en cada etapa
-                con su responsable, fecha y estado.
-            </p>
-            <ProgresoBar progreso={datos.progreso} />
-            <div className="grid gap-4 md:grid-cols-3">
-                {datos.etapas.map((e) => (
-                    <EtapaColumna
-                        key={e}
-                        etapa={e}
-                        info={datos.info[e]}
-                        acciones={datos.acciones[e]}
-                        onAgregar={agregar}
-                        onEstado={cambiarEstado}
-                        onEliminar={eliminar}
-                    />
-                ))}
+            <div className="flex items-start justify-between gap-3 flex-wrap no-print">
+                <p className="text-sm text-gray-500 max-w-2xl">
+                    Gestiona el cambio con el modelo de <strong>Kurt Lewin</strong>: <strong>Descongelar</strong> (preparar) →
+                    <strong> Cambiar</strong> (implementar) → <strong>Recongelar</strong> (consolidar). Registra acciones en cada etapa
+                    con su responsable, fecha y estado.
+                </p>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setVerInforme((v) => !v)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-[#1e3654] border border-gray-200 hover:bg-gray-50"
+                    >
+                        <span className="material-symbols-outlined text-base">{verInforme ? 'edit' : 'description'}</span>
+                        {verInforme ? 'Volver a editar' : 'Ver informe'}
+                    </button>
+                    {verInforme && (
+                        <button
+                            onClick={() => window.print()}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-[#1e3654] text-white hover:bg-[#0c2f56]"
+                        >
+                            <span className="material-symbols-outlined text-base">picture_as_pdf</span>
+                            Imprimir
+                        </button>
+                    )}
+                </div>
             </div>
+
+            {verInforme ? (
+                <InformeLewin codigo={datos.codigo ?? codigo} proceso={datos.proceso} datos={datos} />
+            ) : (
+                <>
+                    <ProgresoBar progreso={datos.progreso} />
+                    <div className="grid gap-4 md:grid-cols-3">
+                        {datos.etapas.map((e) => (
+                            <EtapaColumna
+                                key={e}
+                                etapa={e}
+                                info={datos.info[e]}
+                                acciones={datos.acciones[e]}
+                                onAgregar={agregar}
+                                onEstado={cambiarEstado}
+                                onEliminar={eliminar}
+                            />
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
     )
 }

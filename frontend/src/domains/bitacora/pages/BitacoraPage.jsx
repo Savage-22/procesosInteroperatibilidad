@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
+import BotonExportarExcel from '../../../shared/components/BotonExportarExcel'
 import { useDatos } from '../../../shared/hooks/useDatos'
 import { obtenerBitacora, getErrorMessage } from '../services/bitacoraService'
 
@@ -154,13 +155,16 @@ export default function BitacoraPage() {
                         con la evidencia cargada en el sistema.
                     </p>
                 </div>
-                <button
-                    onClick={() => window.print()}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-[#1e3654] border border-gray-200 bg-white hover:bg-gray-50"
-                >
-                    <span className="material-symbols-outlined text-base">picture_as_pdf</span>
-                    Descargar PDF
-                </button>
+                <div className="flex items-start gap-2 flex-wrap">
+                    <button
+                        onClick={() => window.print()}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-[#1e3654] border border-gray-200 bg-white hover:bg-gray-50"
+                    >
+                        <span className="material-symbols-outlined text-base">picture_as_pdf</span>
+                        Descargar PDF
+                    </button>
+                    <BotonExportarExcel />
+                </div>
             </div>
 
             <div className="zona-imprimible space-y-6">

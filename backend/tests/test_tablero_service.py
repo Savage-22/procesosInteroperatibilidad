@@ -41,12 +41,25 @@ def test_tablero_usa_el_ultimo_mes_como_corte(session):
     assert fila["valor_previo"] == 50.0
 
 
-def test_tablero_calcula_avance_contra_la_meta_final(session):
+def test_tablero_calcula_avance_como_cumplimiento_del_esperado(session):
+    # El esperado del mes es 90 (fixture) y se obtuvo 75 → avance T1 = 75/90.
+    # El avance mide el cumplimiento del compromiso mensual, no la distancia a
+    # la meta final; la brecha sí se reporta contra la meta final.
     _proceso_medido(session, meta=100.0, valores=[("Enero", 75)])
     fila = TableroService.monitoreo(session)["indicadores"][0]
-    assert fila["avance"] == 75.0
-    assert fila["semaforo"] == "Amarillo"  # 75 es justo el umbral ámbar
-    assert fila["brecha"] == 25.0
+    assert fila["avance"] == 83.3  # 75 / 90 * 100
+    assert fila["semaforo"] == "Amarillo"
+    assert fila["brecha"] == 25.0  # 100 (meta final) − 75
+
+
+def test_tablero_verde_si_cumple_el_esperado_aunque_falte_para_la_meta_final(session):
+    # Cada mes alcanza su esperado (90) → avance T1 100 → Verde, aunque el valor
+    # siga por debajo de la meta final (100). Antes el tablero lo pintaba de
+    # ámbar por compararlo contra la meta anual, contradiciendo al dashboard.
+    _proceso_medido(session, meta=100.0, valores=[("Enero", 90), ("Febrero", 91)])
+    fila = TableroService.monitoreo(session)["indicadores"][0]
+    assert fila["semaforo"] == "Verde"
+    assert fila["brecha"] == 9.0  # todavía a 9 pts de la meta final
 
 
 def test_tablero_marca_rojo_bajo_el_umbral(session):
@@ -118,6 +131,17 @@ def test_tablero_solo_toma_meses_del_periodo(session):
     assert fila_s2["mes_corte"] == "Agosto"
 
 
+def test_tablero_por_defecto_mira_todo_el_anio(session):
+    # Sin periodo explícito no se recorta a un semestre: si se recortara, los
+    # meses de la segunda mitad quedarían ocultos y el tablero no coincidiría
+    # con el dashboard, que sí los cuenta.
+    _proceso_medido(session, valores=[("Enero", 50), ("Agosto", 90)])
+    data = TableroService.monitoreo(session)
+    assert data["periodo"]["clave"] == "ANUAL"
+    assert data["indicadores"][0]["mes_corte"] == "Agosto"
+    assert data["indicadores"][0]["meses_evaluados"] == 2
+
+
 def test_tablero_agrupa_por_modulo(session):
     _proceso_medido(session, codigo="M1.1", valores=[("Enero", 90)])
     _proceso_medido(session, codigo="M2.1", valores=[("Enero", 50)])
@@ -154,6 +178,21 @@ def test_resultados_calcula_la_ganancia_de_la_mejora(session):
     assert indicador["ganancia_pp"] == 35.0  # de 60% a 95% de avance
     assert data["procesos"][0]["mejora"]["etapa"] == "proyectada"
     assert data["resumen"]["indicadores_intervenidos"] == 1
+
+
+def test_resultados_usa_el_mismo_semaforo_que_el_tablero(session):
+    # El esperado mensual es 90 (fixture) y se cumple; la meta final es 100.
+    # Medir contra la meta anual daría Amarillo y contra el esperado da Verde:
+    # ambas vistas deben coincidir para no contradecirse sobre el mismo dato.
+    _proceso_medido(session, meta=100.0, valores=[("Enero", 90), ("Febrero", 91)])
+
+    fila = TableroService.monitoreo(session)["indicadores"][0]
+    indicador = ResultadosService.consolidado(session)["procesos"][0]["indicadores"][0]
+
+    assert indicador["semaforo"] == fila["semaforo"] == "Verde"
+    assert indicador["avance"] == fila["avance"]
+    # El avance contra la meta final se sigue reportando, pero como dato aparte
+    assert indicador["avance_meta_final"] == 91.0
 
 
 def test_resultados_omite_procesos_sin_nada_que_reportar(session):

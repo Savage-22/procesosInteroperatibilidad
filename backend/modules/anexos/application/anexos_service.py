@@ -80,7 +80,10 @@ class AnexosService:
                 {
                     "numero": 2,
                     **ANEXOS[2],
-                    "disponible": len(con_ficha) > 0,
+                    # Se puede abrir con solo tener procesos: si el proceso aún no
+                    # tiene ficha SIPOC, el anexo se emite con los campos vacíos
+                    # para que el usuario lo complete (o lo complete la IA).
+                    "disponible": total > 0,
                     "completos": len(con_ficha),
                     "total": total,
                     "detalle": f"{len(con_ficha)} de {total} proceso(s) con ficha SIPOC",
@@ -88,7 +91,7 @@ class AnexosService:
                 {
                     "numero": 4,
                     **ANEXOS[4],
-                    "disponible": len(con_indicador) > 0,
+                    "disponible": total > 0,
                     "completos": len(con_indicador),
                     "total": total,
                     "detalle": f"{len(con_indicador)} de {total} proceso(s) con indicadores",
