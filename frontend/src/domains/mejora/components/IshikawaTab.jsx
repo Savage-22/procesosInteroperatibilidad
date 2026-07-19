@@ -4,6 +4,7 @@ import {
 } from 'recharts'
 
 import { obtenerCausas, guardarCausa, borrarCausa, getErrorMessage } from '../services/mejoraService'
+import DiagramaIshikawa from './DiagramaIshikawa'
 import SugerenciasCausasIA from './SugerenciasCausasIA'
 
 const ICONO_6M = {
@@ -133,6 +134,13 @@ export default function IshikawaTab({ codigo }) {
             </p>
 
             <SugerenciasCausasIA codigo={codigo} onAceptar={aceptarSugerencias} />
+
+            <DiagramaIshikawa
+                codigo={datos.codigo ?? codigo}
+                proceso={datos.proceso}
+                categorias={datos.categorias}
+                ishikawa={datos.ishikawa}
+            />
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {datos.categorias.map((cat) => (
