@@ -5,7 +5,7 @@ import SemaforoBadge from '../../../shared/components/SemaforoBadge'
 import { SEMAFORO_COLOR } from '../../../shared/semaforo'
 import { TENDENCIA, formatear } from '../services/tableroService'
 
-/** Barra de avance contra la meta, coloreada con el semáforo del indicador. */
+/** Barra de avance T1 (cumplimiento del esperado), coloreada con el semáforo. */
 function BarraAvance({ avance, semaforo }) {
     if (avance === null) return <span className="text-gray-300 text-xs">Sin datos</span>
     return (
@@ -136,7 +136,7 @@ export default function TablaMonitoreo({ indicadores }) {
                             <th className="px-3 py-2 font-medium">Proceso / Indicador</th>
                             <th className="px-3 py-2 font-medium text-right">Meta</th>
                             <th className="px-3 py-2 font-medium text-right">Actual</th>
-                            <th className="px-3 py-2 font-medium">Avance vs meta</th>
+                            <th className="px-3 py-2 font-medium" title="Cumplimiento promedio del resultado esperado de cada mes (avance T1)">Avance T1</th>
                             <th className="px-3 py-2 font-medium">Semáforo</th>
                             <th className="px-3 py-2 font-medium">Tendencia</th>
                             <th className="px-3 py-2 font-medium text-center" title="Meses en que se cumplió el resultado esperado">

@@ -32,6 +32,10 @@ class TableroService:
     @staticmethod
     def monitoreo(session: Session, periodo: str | None = None) -> dict:
         org = OrganizacionService.actual(session)
+        # Por defecto el tablero mira todo el año: recortar al semestre de
+        # evaluación escondería meses ya medidos y haría que el mismo indicador
+        # saliera de un color aquí y de otro en el dashboard.
+        periodo = periodo or "ANUAL"
         meses = meses_periodo(periodo)
 
         procesos = {
@@ -89,11 +93,22 @@ class TableroService:
         ultimo = serie[-1] if serie else None
         previo = serie[-2] if len(serie) > 1 else None
 
-        avance = None
-        if ultimo is not None and indicador.meta_final is not None:
-            avance = ProcesoService.calcular_avance_t1(
+        # Semáforo del indicador: promedio del avance T1 mensual (resultado
+        # obtenido vs. esperado de cada mes), igual que el dashboard y el Pareto.
+        # Antes se comparaba el último valor contra la meta final de fin de año,
+        # lo que pintaba de ámbar a indicadores que sí cumplían su compromiso
+        # mensual pero todavía no llegaban a la meta anual.
+        avances = [p["avance"] for p in serie if p["avance"] is not None]
+        if avances:
+            avance = round(sum(avances) / len(avances), 1)
+        elif ultimo is not None and indicador.meta_final:
+            # Sin esperado mensual registrado: la meta final es la única referencia.
+            contra_meta = ProcesoService.calcular_avance_t1(
                 ultimo["valor"], indicador.meta_final, es_descendente
             )
+            avance = round(contra_meta, 1) if contra_meta is not None else None
+        else:
+            avance = None
 
         # Cumplimiento del compromiso mensual: cuántos meses del periodo se
         # alcanzó el resultado esperado. Complementa al avance contra la meta
@@ -118,7 +133,7 @@ class TableroService:
             "mes_corte": ultimo["mes"] if ultimo else None,
             "valor_actual": ultimo["valor"] if ultimo else None,
             "valor_previo": previo["valor"] if previo else None,
-            "avance": round(avance, 1) if avance is not None else None,
+            "avance": avance,
             "semaforo": calcular_semaforo(avance),
             "brecha": TableroService._brecha(ultimo, indicador.meta_final, es_descendente),
             "tendencia": TableroService._tendencia(ultimo, previo, es_descendente),
@@ -157,6 +172,8 @@ class TableroService:
                 "valor": valor,
                 "esperado": esperado,
                 "cumple_esperado": cumple,
+                # Avance T1 del mes: obtenido vs. esperado (no vs. la meta final).
+                "avance": ProcesoService.calcular_avance_t1(valor, esperado, es_descendente),
             })
         return serie
 

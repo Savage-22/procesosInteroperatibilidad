@@ -106,8 +106,13 @@ class ResultadosService:
             "meta_final": comparado["meta_final"],
             "mes_corte": ultimo["mes"] if ultimo else None,
             "obtenido": ultimo["valor"] if ultimo else None,
-            "avance": ultimo["avance"] if ultimo else None,
-            "semaforo": ultimo["semaforo"] if ultimo else "Sin datos",
+            # El semáforo del indicador es su avance T1 (cumplimiento del
+            # esperado mensual), el mismo criterio que el tablero y el dashboard.
+            "avance": comparado["avance_t1"],
+            "semaforo": comparado["semaforo_t1"] if real else "Sin datos",
+            # Cuánto de la meta de fin de año lleva alcanzado: acompaña al
+            # Antes/Después, pero no decide el color del indicador.
+            "avance_meta_final": ultimo["avance"] if ultimo else None,
             "mediciones": len(real),
             # Efecto esperado de la mejora; None si aún no se proyectó.
             "proyectado": mejora["valor_despues"] if mejora else None,

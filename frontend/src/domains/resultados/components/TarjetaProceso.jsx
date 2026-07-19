@@ -35,6 +35,8 @@ function Indicador({ indicador }) {
                     <p className="text-[11px] text-gray-400 mt-0.5">
                         {indicador.mediciones} medición(es)
                         {indicador.mes_corte && ` · corte a ${indicador.mes_corte}`}
+                        {indicador.avance_meta_final !== null &&
+                            ` · ${porcentaje(indicador.avance_meta_final)} de la meta final`}
                     </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -44,7 +46,12 @@ function Indicador({ indicador }) {
                     <span className="text-sm font-semibold text-[#1e3654]">
                         {formatear(indicador.obtenido, indicador.unidad)}
                     </span>
-                    <span className="text-xs text-gray-500 tabular-nums">{porcentaje(indicador.avance)}</span>
+                    <span
+                        className="text-xs text-gray-500 tabular-nums"
+                        title="Avance T1: cumplimiento promedio del resultado esperado de cada mes"
+                    >
+                        {porcentaje(indicador.avance)}
+                    </span>
                     <SemaforoBadge semaforo={indicador.semaforo} />
                 </div>
             </div>
