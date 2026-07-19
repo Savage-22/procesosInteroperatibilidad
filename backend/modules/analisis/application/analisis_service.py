@@ -1,9 +1,16 @@
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from modules.analisis.application.contexto_service import ContextoService
-from modules.fichas.application.causa_service import CATEGORIAS_6M
+from modules.fichas.application.cambio_service import ETAPAS, CambioService
+from modules.fichas.application.causa_service import CATEGORIAS_6M, CausaService
+from modules.fichas.application.comparacion_service import ComparacionService
 from modules.fichas.application.errores import ErrorValidacion
+from modules.fichas.application.oportunidad_service import (
+    ESTRATEGIAS,
+    OportunidadService,
+)
 from modules.fichas.application.proceso_lookup import resolver_proceso
+from modules.fichas.infrastructure.models import FichaIndicador
 from shared.ia import completar, completar_json, disponible
 
 _ROL = """Eres analista de procesos especializado en la Directiva CEPLAN N° 0056-2024 \
@@ -227,6 +234,119 @@ que ataquen las causas marcadas como raíz. En costo e impacto, 1 es lo más baj
         )
         # No se persiste nada: el usuario revisa las propuestas y decide cuáles guardar.
         return completar_json(_ROL, prompt, max_tokens=1800)
+
+    # ------------------------------------------------------------------ #
+    # Mejora completa — las 4 partes de un tirón                         #
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def completar_mejora(session: Session, codigo: str) -> dict:
+        """
+        Propone el ciclo de mejora completo del proceso: diagnóstico Ishikawa,
+        oportunidades (F=C×I), gestión del cambio (Lewin) y —de forma
+        determinista, no inventada por la IA— la proyección Antes/Después.
+
+        No persiste nada: devuelve la propuesta para que el usuario la revise y
+        la aplique con `aplicar_mejora`.
+        """
+        proceso = resolver_proceso(session, codigo)
+        contexto = ContextoService.mejora(session, codigo)
+        prompt = (
+            "Este proceso no alcanzó su meta. Diseña su ciclo de mejora COMPLETO "
+            "en cuatro partes coherentes entre sí: (1) diagnóstico de causas con "
+            "Ishikawa, (2) oportunidades de mejora que ataquen las causas raíz, "
+            "(3) plan de gestión del cambio de Kurt Lewin, y (4) una breve nota "
+            "que justifique la proyección de mejora.\n\n"
+            f"DATOS:\n{contexto}\n\n"
+            f"Categorías Ishikawa válidas (usa exactamente estos nombres): {', '.join(CATEGORIAS_6M)}\n"
+            f"Estrategias de oportunidad válidas: {', '.join(ESTRATEGIAS)}\n"
+            f"Etapas de Lewin válidas (usa exactamente estos nombres): {', '.join(ETAPAS)}\n\n"
+            """Esquema:
+{"causas": [
+  {"categoria": "una categoría válida", "descripcion": "la causa, concreta",
+   "es_raiz": true|false, "peso": 1-10, "justificacion": "en qué dato te basas"}
+ ],
+ "oportunidades": [
+  {"descripcion": "la oportunidad", "accion_propuesta": "qué hacer exactamente",
+   "costo": 1-5, "impacto": 1-5, "probabilidad": 1-5, "consecuencia": 1-5,
+   "estrategia": "una estrategia válida"}
+ ],
+ "cambio": [
+  {"etapa": "una etapa válida", "descripcion": "acción concreta del plan",
+   "responsable": "rol sugerido"}
+ ],
+ "proyeccion_nota": "1-2 frases: cómo la mejora cierra la brecha hasta la meta"}
+
+Reglas: 4 a 6 causas cubriendo al menos 3 categorías; 2 a 4 oportunidades que \
+ataquen las causas raíz; al menos una acción de cambio por cada etapa de Lewin \
+(descongelar, cambiar, recongelar). En costo e impacto 1 es lo más bajo y 5 lo más \
+alto; la factibilidad es costo × impacto."""
+        )
+        propuesta = completar_json(_ROL, prompt, max_tokens=2200)
+        propuesta["proyeccion"] = AnalisisService._proyeccion_sugerida(
+            session, proceso.id, propuesta.get("proyeccion_nota")
+        )
+        return propuesta
+
+    @staticmethod
+    def aplicar_mejora(session: Session, codigo: str, propuesta: dict) -> dict:
+        """
+        Persiste la propuesta de mejora ya revisada por el usuario. Se aplican
+        solo las partes presentes en `propuesta`, reutilizando los servicios de
+        cada módulo para respetar sus validaciones.
+        """
+        resolver_proceso(session, codigo)  # valida que el proceso exista
+        resumen = {"causas": 0, "oportunidades": 0, "cambio": 0, "proyeccion": False}
+
+        for causa in propuesta.get("causas", []):
+            if (causa.get("categoria") in CATEGORIAS_6M) and (causa.get("descripcion") or "").strip():
+                CausaService.crear(session, codigo, causa)
+                resumen["causas"] += 1
+
+        for op in propuesta.get("oportunidades", []):
+            if (op.get("descripcion") or "").strip():
+                OportunidadService.crear(session, codigo, op)
+                resumen["oportunidades"] += 1
+
+        for accion in propuesta.get("cambio", []):
+            if (accion.get("etapa") in ETAPAS) and (accion.get("descripcion") or "").strip():
+                CambioService.crear(session, codigo, accion)
+                resumen["cambio"] += 1
+
+        proyeccion = propuesta.get("proyeccion") or {}
+        indicador_id = proyeccion.get("indicador_id")
+        meses = proyeccion.get("meses") or []
+        if indicador_id and meses:
+            ComparacionService.guardar_proyeccion(session, indicador_id, {
+                "meses": meses,
+                "nota": proyeccion.get("nota"),
+            })
+            resumen["proyeccion"] = True
+
+        return {"codigo": codigo, "aplicado": resumen}
+
+    @staticmethod
+    def _proyeccion_sugerida(session: Session, proceso_id: int, nota: str | None) -> dict:
+        """Rampa determinista hasta la meta para el indicador principal del proceso."""
+        indicador = session.exec(
+            select(FichaIndicador).where(
+                FichaIndicador.proceso_id == proceso_id,
+                FichaIndicador.activo == True,  # noqa: E712
+            )
+        ).first()
+        if indicador is None:
+            return {"indicador_id": None, "meses": [], "nota": nota}
+        try:
+            sugerida = ComparacionService.sugerir_proyeccion(session, indicador.id)
+        except ErrorValidacion:
+            # Sin mediciones o sin meta no se puede trazar la rampa; se omite.
+            return {"indicador_id": indicador.id, "indicador": indicador.nombre, "meses": [], "nota": nota}
+        return {
+            "indicador_id": indicador.id,
+            "indicador": indicador.nombre,
+            "meses": sugerida["meses"],
+            "nota": nota,
+        }
 
     # ------------------------------------------------------------------ #
     # Explicación libre                                                  #

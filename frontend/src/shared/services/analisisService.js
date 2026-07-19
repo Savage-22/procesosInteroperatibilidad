@@ -14,6 +14,10 @@ export async function obtenerInforme(periodo) { return (await api.getInforme(per
 export async function pedirIndicadores(codigo) { return (await api.sugerirIndicadores(codigo)).data }
 export async function pedirSipoc(codigo) { return (await api.sugerirSipoc(codigo)).data }
 export async function pedirCausas(codigo) { return (await api.sugerirCausas(codigo)).data }
+export async function pedirMejoraCompleta(codigo) { return (await api.completarMejora(codigo)).data }
+export async function aplicarMejoraCompleta(codigo, propuesta) {
+    return (await api.aplicarMejora(codigo, propuesta)).data
+}
 export async function preguntar(datos) { return (await api.explicar(datos)).data }
 
 export function getErrorIA(error) {
