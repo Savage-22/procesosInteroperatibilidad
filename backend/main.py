@@ -7,6 +7,9 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from modules.analisis.http.analisis_router import router as analisis_router
+from modules.anexos.http.anexos_router import router as anexos_router
+from modules.bitacora.http.bitacora_router import router as bitacora_router
 from modules.chat.chat_router import router as chat_router
 from modules.dashboard.application.dashboard_service import DashboardService
 from modules.dashboard.http.dashboard_router import router as dashboard_router
@@ -21,6 +24,7 @@ from modules.objetivos.objetivos_router import router as objetivos_router
 from modules.plantilla.plantilla_router import router as plantilla_router
 from modules.procesos.http.procesos_router import router as procesos_router
 from modules.procesos.infrastructure.excel_reader import ExcelStore
+from modules.tablero.http.tablero_router import router as tablero_router
 
 load_dotenv()
 
@@ -74,6 +78,10 @@ app.include_router(ficha_proceso_router)
 app.include_router(indicador_router)
 app.include_router(organizacion_router)
 app.include_router(mejora_router)
+app.include_router(anexos_router)
+app.include_router(tablero_router)
+app.include_router(bitacora_router)
+app.include_router(analisis_router)
 
 
 @app.get("/health")

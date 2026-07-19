@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 
+import PanelAnalisisIA from '../../../shared/components/PanelAnalisisIA'
 import IshikawaTab from '../components/IshikawaTab'
 import OportunidadesTab from '../components/OportunidadesTab'
 import ComparacionTab from '../components/ComparacionTab'
@@ -49,6 +50,13 @@ export default function MejoraPage() {
             {tab === 'oportunidades' && <OportunidadesTab codigo={codigo} />}
             {tab === 'comparacion' && <ComparacionTab codigo={codigo} />}
             {tab === 'cambio' && <CambioTab codigo={codigo} />}
+
+            <PanelAnalisisIA
+                seccion="mejora"
+                codigo={codigo}
+                titulo={`Análisis de la mejora de ${codigo}`}
+                descripcion="La IA revisa si el diagnóstico ataca la causa raíz y si el plan de cambio alcanza."
+            />
         </div>
     )
 }

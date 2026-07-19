@@ -32,10 +32,16 @@ El script crea el venv, instala dependencias y levanta ambos servidores:
 ## Funcionalidades
 
 - **Dashboard** (`/`) — KPIs globales, distribución de semáforo por proceso y tabla resumen ordenable
+- **Tablero de control** (`/tablero`) — monitoreo indicador por indicador: valor actual vs. meta, avance, semáforo, tendencia, cumplimiento del compromiso mensual y alerta de indicadores en rojo sin plan de mejora. Filtrable por semáforo y por semestre
+- **Resultados del análisis** (`/resultados`) — resultado de cada indicador y efecto de las mejoras aplicadas: comparación antes/después, causas raíz, oportunidades implementadas y avance de la gestión del cambio, más el **informe ejecutivo** generado por IA
+- **Anexos** (`/anexos`) — vista previa imprimible de los Anexos 1 (inventario), 2 (ficha SIPOC) y 4 (ficha de indicadores) con el formato de la directiva. El botón "Descargar PDF" usa la impresión del navegador
+- **Bitácora** (`/bitacora`) — registro de las 9 fases metodológicas del trabajo; el estado de cada fase se deriva de la evidencia realmente cargada en el sistema, así que nunca queda desincronizada
+- **Asistente guiado** (`/onboarding`) — 6 pasos para dejar el tablero operativo desde cero, con sugerencias de la IA para el SIPOC y los indicadores
 - **Detalle de proceso** (`/proceso/:codigo`) — resultado obtenido vs esperado, avance T1 mensual con umbrales 95/75 y tabla de datos
 - **Comparativa** (`/comparativa`) — líneas superpuestas de avance T1 con selector múltiple por módulo y leyenda interactiva
 - **Pareto** (`/pareto`) — ranking de criticidad por *brecha de avance* (100 − avance T1 promedio): identifica los procesos que concentran el 80% del incumplimiento respecto a lo esperado **a la fecha**, alineado con el semáforo
 - **Predicciones** (`/predicciones`) — proyección del resultado de cada proceso hasta diciembre mediante regresión lineal sobre los meses reportados: tendencia, valor estimado a fin de año, mes en que cruza la meta y nivel de confiabilidad (R²)
+- **Análisis con IA** — botón *Analizar* en el tablero, resultados, Pareto, predicciones y en el módulo de mejora: la IA lee los datos reales de esa sección y devuelve diagnóstico, hallazgos priorizados por severidad y recomendaciones accionables. También propone causas Ishikawa, indicadores y contenido SIPOC; nada se guarda sin que el usuario lo confirme
 - **Recarga en caliente** — al editar y guardar el Excel, el backend recarga los datos y el frontend se refresca solo (sin reiniciar nada)
 - **Carga desde la interfaz** — botón "Cargar Excel" en el navbar que sube un nuevo archivo de datos (`POST /api/upload`) y refresca todas las vistas al instante
 
@@ -54,16 +60,24 @@ proyecto/
 ├── datos_estandarizados.xlsx   # Fuente de datos (una hoja por módulo)
 ├── docker-compose.yml
 ├── start.sh / start.bat        # Arranque en modo desarrollo (Linux / Windows)
-├── backend/                    # FastAPI + pandas
+├── backend/                    # FastAPI + pandas + SQLModel
 │   ├── main.py                 # App, CORS, lifespan y vigilante del Excel
-│   ├── shared/                 # Utilidades (orden de meses, semáforo)
+│   ├── shared/                 # Utilidades (meses, semáforo, periodo, cliente de IA)
 │   ├── modules/
 │   │   ├── procesos/           # Lector de Excel, cálculos, endpoints
-│   │   └── dashboard/          # KPIs globales
+│   │   ├── dashboard/          # KPIs globales
+│   │   ├── fichas/             # Inventario, fichas SIPOC, indicadores y mejora
+│   │   ├── anexos/             # Anexos 1, 2 y 4 listos para renderizar
+│   │   ├── tablero/            # Monitoreo por indicador y resultados consolidados
+│   │   ├── bitacora/           # Fases del trabajo con su evidencia
+│   │   ├── analisis/           # Análisis y sugerencias con IA
+│   │   └── chat/               # Asistente conversacional
 │   └── tests/                  # pytest
 └── frontend/                   # React 19 + Vite + Tailwind (screaming architecture)
     └── src/
-        ├── domains/            # dashboard, procesos, comparativa, pareto
+        ├── domains/            # dashboard, tablero, resultados, anexos, bitacora,
+        │   │                   # procesos, comparativa, pareto, predicciones,
+        │   │                   # inventario, fichas, mejora, objetivos, onboarding
         │   └── <dominio>/      # pages/ components/ services/ api/
         ├── shared/             # contexto de datos, hooks, componentes comunes
         └── infrastructure/     # httpClient (axios)
@@ -188,6 +202,8 @@ npm run dev
 | `ALLOWED_ORIGINS` (backend) | `http://localhost:5173` | Orígenes CORS, separados por coma |
 | `EXCEL_WATCH_INTERVAL` (backend) | `5` | Segundos entre chequeos de cambios del Excel |
 | `MODULOS_ESPERADOS` (backend) | `M1,M2,M3,M4` | Módulos cuya ausencia genera advertencia en la interfaz |
+| `DEEPSEEK_API_KEY` (backend) | — | Clave del proveedor de IA. Sin ella el chat y los paneles de análisis se ocultan; el resto del sistema funciona igual |
+| `PERIODO_EVALUACION` (backend) | `S1` | Semestre por defecto de la evaluación (`S1` = Ene–Jun, `S2` = Jul–Dic) |
 | `VITE_API_URL` (frontend) | `http://localhost:8000` | URL del backend (vacío = mismo origen, usado en Docker) |
 
 ## API
@@ -202,6 +218,19 @@ npm run dev
 | GET | `/api/predicciones` | Proyección de tendencia a diciembre por proceso (regresión lineal) |
 | GET | `/api/meta` | Versión de datos, última carga, módulos y advertencias |
 | POST | `/api/upload` | Sube un nuevo Excel de datos (multipart, campo `archivo`) |
+| GET | `/api/tablero?periodo=S1` | Monitoreo por indicador: estado vs. meta, tendencia y alertas |
+| GET | `/api/resultados` | Resultados de los indicadores y efecto de las mejoras aplicadas |
+| GET | `/api/bitacora` | Fases del trabajo con la evidencia registrada en el sistema |
+| GET | `/api/anexos` | Anexos emitibles y su grado de completitud |
+| GET | `/api/anexos/1` | Anexo 1 — Inventario de productos y procesos |
+| GET | `/api/anexos/2/{codigo}` | Anexo 2 — Ficha de producto y proceso (SIPOC) |
+| GET | `/api/anexos/4/{codigo}` | Anexo 4 — Ficha de indicadores |
+| GET | `/api/analisis/estado` | Si la IA está configurada en este servidor |
+| POST | `/api/analisis/seccion/{seccion}` | Análisis de una sección (`tablero`, `resultados`, `pareto`, `predicciones`, `mejora`) |
+| GET | `/api/analisis/informe` | Informe ejecutivo global del estado institucional |
+| POST | `/api/analisis/sugerir/indicadores/{codigo}` | Indicadores propuestos para un proceso |
+| POST | `/api/analisis/sugerir/sipoc/{codigo}` | Caracterización SIPOC propuesta |
+| POST | `/api/analisis/sugerir/causas/{codigo}` | Causas Ishikawa y oportunidades propuestas |
 | GET | `/health` | Estado del servidor |
 
 Formato de respuesta: `{ "success": true, "data": … }`.

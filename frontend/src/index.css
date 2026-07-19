@@ -1,9 +1,21 @@
 @import "tailwindcss";
 
-/* Impresión de fichas: solo se imprime la zona marcada, sin navbar ni acciones */
+/* Impresión de fichas y anexos: solo se imprime la zona marcada, sin navbar ni acciones */
 @media print {
+    @page { margin: 12mm; }
+
     body * { visibility: hidden; }
     .zona-imprimible, .zona-imprimible * { visibility: visible; }
     .zona-imprimible { position: absolute; left: 0; top: 0; width: 100%; }
     .no-print { display: none !important; }
+
+    /* Los anexos llevan encabezados y badges de color: sin esto el navegador
+       los descarta al imprimir y el documento pierde su formato oficial. */
+    .zona-imprimible * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Evita que una ficha de indicador quede partida entre dos páginas */
+    .zona-imprimible section { break-inside: avoid; }
 }

@@ -4,6 +4,7 @@ import {
 } from 'recharts'
 
 import { obtenerCausas, guardarCausa, borrarCausa, getErrorMessage } from '../services/mejoraService'
+import SugerenciasCausasIA from './SugerenciasCausasIA'
 
 const ICONO_6M = {
     'Método': 'account_tree', 'Personas': 'group', 'Entorno': 'public',
@@ -102,6 +103,17 @@ export default function IshikawaTab({ codigo }) {
     }, [codigo])
 
     async function agregar(datosCausa) { await guardarCausa(codigo, datosCausa); await cargar() }
+    async function aceptarSugerencias(causas) {
+        for (const c of causas) {
+            await guardarCausa(codigo, {
+                categoria: c.categoria,
+                descripcion: c.descripcion,
+                es_raiz: Boolean(c.es_raiz),
+                peso: Number(c.peso) || 1,
+            })
+        }
+        await cargar()
+    }
     async function toggleRaiz(c) { await guardarCausa(codigo, { es_raiz: !c.es_raiz }, c.id); await cargar() }
     async function eliminar(c) {
         if (!window.confirm(`¿Eliminar la causa "${c.descripcion}"?`)) return
@@ -119,6 +131,9 @@ export default function IshikawaTab({ codigo }) {
                 Registra las causas del bajo desempeño por las <strong>6M</strong> y marca con ⭐ las <strong>causas raíz</strong>.
                 El Pareto te muestra las pocas causas que generan la mayor parte del problema.
             </p>
+
+            <SugerenciasCausasIA codigo={codigo} onAceptar={aceptarSugerencias} />
+
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {datos.categorias.map((cat) => (
                     <CategoriaCard key={cat} categoria={cat} causas={datos.ishikawa[cat]} onAgregar={agregar} onToggleRaiz={toggleRaiz} onEliminar={eliminar} />

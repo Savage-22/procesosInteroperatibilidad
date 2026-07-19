@@ -36,10 +36,10 @@ def test_paso_sugerido_avanza_con_el_progreso(session):
     assert OrganizacionService.resumen(session)["paso_sugerido"] == 3  # falta indicador
 
     ind = IndicadorService.crear(session, "M3.1", {"nombre": "Ind"})
-    assert OrganizacionService.resumen(session)["paso_sugerido"] == 4  # falta medición
+    assert OrganizacionService.resumen(session)["paso_sugerido"] == 5  # falta medición
 
     IndicadorService.guardar_medicion(session, ind["id"], {"mes": "Enero", "numerador": 5, "denominador": 10})
-    assert OrganizacionService.resumen(session)["paso_sugerido"] == 5
+    assert OrganizacionService.resumen(session)["paso_sugerido"] == 6  # cierre
 
 
 def test_conteo_con_ficha(session):
@@ -51,9 +51,9 @@ def test_conteo_con_ficha(session):
     assert resumen["conteos"]["procesos"] == 1
 
 
-def test_completado_fija_paso_5(session):
+def test_completado_fija_el_ultimo_paso(session):
     OrganizacionService.actualizar(session, {"estado_onboarding": "completado"})
-    assert OrganizacionService.resumen(session)["paso_sugerido"] == 5
+    assert OrganizacionService.resumen(session)["paso_sugerido"] == 6
 
 
 def test_estado_invalido_se_ignora(session):
