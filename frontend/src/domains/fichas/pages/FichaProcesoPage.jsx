@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 
+import SugerenciasIA from '../../onboarding/components/SugerenciasIA'
+import { pedirSipoc } from '../../../shared/services/analisisService'
 import { obtenerFicha, guardarFicha, getErrorMessage } from '../services/fichaProcesoService'
 
 const TIPOS = ['misional', 'estratégico', 'soporte']
@@ -163,6 +165,25 @@ export default function FichaProcesoPage() {
 
     const set = (campo) => (valor) => setForm((f) => ({ ...f, [campo]: valor }))
 
+    // Vuelca la propuesta de la IA en el formulario sin pisar lo ya escrito:
+    // solo rellena los campos que el usuario aún tiene vacíos. Nada se guarda
+    // solo; el usuario revisa y confirma con "Guardar ficha".
+    function usarSugerenciaSipoc(sug) {
+        const lista = (campo, propuesto) => (form[campo]?.length ? form[campo] : (propuesto || []))
+        setForm((f) => ({
+            ...f,
+            tipo: f.tipo || sug.tipo || '',
+            objetivo: f.objetivo || sug.objetivo || '',
+            proveedores: lista('proveedores', sug.proveedores),
+            entradas: lista('entradas', sug.entradas),
+            salidas: lista('salidas', sug.salidas),
+            receptores: lista('receptores', sug.receptores),
+            actividades: lista('actividades', sug.actividades),
+            riesgos: lista('riesgos', sug.riesgos),
+            registros: lista('registros', sug.registros),
+        }))
+    }
+
     async function handleGuardar() {
         if (saving) return
         setSaving(true)
@@ -242,6 +263,38 @@ export default function FichaProcesoPage() {
                 <VistaOficial ficha={ficha} />
             ) : (
                 <div className="space-y-4">
+                    <SugerenciasIA
+                        titulo="Completar la ficha con IA"
+                        descripcion="La IA propone un SIPOC inicial a partir del proceso; revísalo y ajústalo antes de guardar."
+                        textoBoton="Proponer SIPOC"
+                        onPedir={() => pedirSipoc(codigo)}
+                    >
+                        {({ resultado, cerrar }) => (
+                            <div className="space-y-3">
+                                <div className="grid sm:grid-cols-2 gap-2 text-xs text-gray-600">
+                                    {[
+                                        ['Proveedores', resultado.proveedores],
+                                        ['Entradas', resultado.entradas],
+                                        ['Salidas', resultado.salidas],
+                                        ['Receptores', resultado.receptores],
+                                    ].map(([etiqueta, items]) => (
+                                        <p key={etiqueta}>
+                                            <span className="font-semibold text-[#1e3654]">{etiqueta}:</span>{' '}
+                                            {(items || []).join(', ') || '—'}
+                                        </p>
+                                    ))}
+                                </div>
+                                <button
+                                    onClick={() => { usarSugerenciaSipoc(resultado); cerrar() }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#1f7a47] text-white hover:bg-[#186139]"
+                                >
+                                    <span className="material-symbols-outlined text-sm">check</span>
+                                    Usar esta propuesta
+                                </button>
+                            </div>
+                        )}
+                    </SugerenciasIA>
+
                     <Seccion titulo="Datos generales" icono="badge">
                         <label className="block">
                             <span className="block text-xs font-semibold text-[#1e3654] mb-1">Tipo de proceso</span>
