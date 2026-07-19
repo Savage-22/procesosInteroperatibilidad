@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from modules.analisis.http.analisis_router import router as analisis_router
 from modules.anexos.http.anexos_router import router as anexos_router
+from modules.export.http.export_router import router as export_router
 from modules.bitacora.http.bitacora_router import router as bitacora_router
 from modules.chat.chat_router import router as chat_router
 from modules.dashboard.application.dashboard_service import DashboardService
@@ -79,6 +80,7 @@ app.include_router(indicador_router)
 app.include_router(organizacion_router)
 app.include_router(mejora_router)
 app.include_router(anexos_router)
+app.include_router(export_router)
 app.include_router(tablero_router)
 app.include_router(bitacora_router)
 app.include_router(analisis_router)

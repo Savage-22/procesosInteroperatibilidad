@@ -132,15 +132,18 @@ def derivar_obtenido(
     return fallback
 
 
-def _parsear_hoja(df_raw: pd.DataFrame, hoja: str) -> tuple[list[dict], list[str]]:
+def _parsear_hoja(df_raw: pd.DataFrame, hoja: str) -> tuple[list[dict], list[str], bool]:
     """
     Extrae los registros de una hoja. Solo se confía en los datos crudos del
     Excel (numerador, denominador, esperado, meta); el resultado obtenido,
     la diferencia, el avance T1 y el semáforo se calculan en el backend.
+
+    El tercer valor indica si la hoja tenía encabezados de datos, para que quien
+    llame distinga "hoja mal formada" de "hoja que no es de datos".
     """
     encontrado = _buscar_encabezado(df_raw)
     if not encontrado:
-        return [], [f"La hoja '{hoja}' no tiene la fila de encabezados esperada"]
+        return [], [f"La hoja '{hoja}' no tiene la fila de encabezados esperada"], False
 
     fila_encabezado, col = encontrado
     registros: list[dict] = []
@@ -202,7 +205,7 @@ def _parsear_hoja(df_raw: pd.DataFrame, hoja: str) -> tuple[list[dict], list[str
             "relevancia": relevancia,
         })
 
-    return registros, []
+    return registros, [], True
 
 
 def parsear_excel(fuente) -> tuple[list[dict], list[str]]:
@@ -212,20 +215,27 @@ def parsear_excel(fuente) -> tuple[list[dict], list[str]]:
     importador a la BD (issue #51).
     """
     advertencias: list[str] = []
+    # Avisos de hojas sin encabezado: solo importan si NINGUNA hoja trajo datos.
+    # Un libro exportado por el sistema trae hojas de mejora (Ishikawa, Lewin…)
+    # que no son de datos, y avisar por cada una sería solo ruido.
+    sin_encabezado: list[str] = []
     xl = pd.ExcelFile(fuente)
 
     registros: list[dict] = []
     for hoja in xl.sheet_names:
         try:
             df_raw = xl.parse(hoja, header=None)
-            filas, avisos = _parsear_hoja(df_raw, hoja)
+            filas, avisos, tiene_encabezado = _parsear_hoja(df_raw, hoja)
             registros.extend(filas)
-            advertencias.extend(avisos)
+            (advertencias if tiene_encabezado else sin_encabezado).extend(avisos)
             modulos = sorted({r["modulo"] for r in filas})
             logger.info(f"  [{hoja}] → {modulos}: {len(filas)} registros")
         except Exception as e:
             logger.warning(f"  Error en hoja '{hoja}': {e}")
             advertencias.append(f"No se pudo leer la hoja '{hoja}' del Excel")
+
+    if not registros:
+        advertencias.extend(sin_encabezado)
 
     modulos_presentes = {r["modulo"] for r in registros}
     for esperado in MODULOS_ESPERADOS:
