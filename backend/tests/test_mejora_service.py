@@ -208,6 +208,17 @@ def test_alerta_proceso_todo_verde_no_aparece(session, proceso):
     assert "M3.3" not in [a["codigo"] for a in data["alertas"]]
 
 
+def test_alerta_usa_esperado_del_mes_y_no_la_meta_anual(session, proceso):
+    # El proceso va cumpliendo mes a mes (78.12 sobre 75 esperado) aunque aún
+    # está lejos de la meta anual de 90. El detalle lo muestra verde, así que el
+    # dashboard tampoco debe pedirle una mejora.
+    InventarioService.crear(session, {"codigo": "M1.1", "nombre": "Proc M1.1"})
+    ind = IndicadorService.crear(session, "M1.1", {"nombre": "% x", "sentido": "Ascendente", "unidad": "%", "meta_final": 90})
+    IndicadorService.guardar_medicion(session, ind["id"], {"mes": "Mayo", "numerador": 25, "denominador": 32, "resultado_esperado": 75})
+    data = AlertasMejoraService.evaluar(session)
+    assert "M1.1" not in [a["codigo"] for a in data["alertas"]]
+
+
 def test_alertas_ordenadas_por_urgencia(session, proceso):
     _proceso_con_avance(session, "M3.4", obtenido=80)   # ámbar (atención)
     _proceso_con_avance(session, "M3.5", obtenido=40)   # rojo (crítico, mayor puntaje)

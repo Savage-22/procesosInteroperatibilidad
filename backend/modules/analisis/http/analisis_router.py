@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from sqlmodel import Session
 
 from modules.analisis.application.analisis_service import AnalisisService
+from modules.analisis.application.informe_service import InformeService
 from modules.fichas.application.errores import ErrorNoEncontrado, ErrorValidacion
 from modules.fichas.infrastructure.database import get_session
 from shared.ia import ErrorIA, IANoConfigurada
@@ -57,6 +58,50 @@ def analizar_seccion(
 def informe(periodo: str | None = None, session: Session = Depends(get_session)):
     """Informe ejecutivo global del estado institucional."""
     return _manejar(lambda: AnalisisService.informe(session, periodo))
+
+
+@router.get("/informe/modulo/{modulo}")
+def informe_modulo(
+    modulo: str,
+    periodo: str | None = None,
+    session: Session = Depends(get_session),
+):
+    """Informe de gestión de un macroproceso (M1, M2, M3, M4)."""
+    return _manejar(lambda: AnalisisService.informe_modulo(session, modulo, periodo))
+
+
+class ComparativaEntrada(BaseModel):
+    codigos: list[str] = []
+
+
+@router.post("/informe/comparativa")
+def informe_comparativa(
+    datos: ComparativaEntrada,
+    session: Session = Depends(get_session),
+):
+    """Informe que explica las diferencias entre los procesos comparados."""
+    return _manejar(lambda: AnalisisService.informe_comparativa(session, datos.codigos))
+
+
+# ------------------------------------------------------------------------- #
+# Informes guardados — para que no se pierdan al cambiar de vista            #
+# ------------------------------------------------------------------------- #
+
+@router.get("/guardados")
+def guardados(tipo: str | None = None, session: Session = Depends(get_session)):
+    """Índice de lo que la IA ya redactó, sin el contenido."""
+    return _manejar(lambda: InformeService.listar(session, tipo))
+
+
+@router.get("/guardados/{tipo}")
+def guardado(tipo: str, alcance: str = "", session: Session = Depends(get_session)):
+    """Último informe o análisis archivado de ese tipo y alcance. `null` si no hay."""
+    return _manejar(lambda: InformeService.obtener(session, tipo, alcance))
+
+
+@router.delete("/guardados/{tipo}")
+def borrar_guardado(tipo: str, alcance: str = "", session: Session = Depends(get_session)):
+    return _manejar(lambda: {"eliminado": InformeService.eliminar(session, tipo, alcance)})
 
 
 @router.post("/sugerir/indicadores/{codigo}")

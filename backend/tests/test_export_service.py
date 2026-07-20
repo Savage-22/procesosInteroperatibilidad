@@ -8,6 +8,8 @@ from modules.export.application.export_service import ExportService
 from modules.fichas.application.cambio_service import CambioService
 from modules.fichas.application.causa_service import CausaService
 from modules.fichas.application.comparacion_service import ComparacionService
+from modules.fichas.application.importador import ImportadorExcel
+from modules.fichas.application.importador_estado import ImportadorEstado
 from modules.fichas.application.indicador_service import IndicadorService
 from modules.fichas.application.inventario_service import InventarioService
 from modules.fichas.application.oportunidad_service import OportunidadService
@@ -122,6 +124,40 @@ def test_la_hoja_de_datos_se_puede_reimportar(session, proceso_completo):
     # avisar por falta de encabezados. Los avisos de módulos ausentes sí son
     # legítimos aquí, porque el fixture solo tiene M1.
     assert not any("encabezados" in a for a in advertencias)
+
+
+def test_el_libro_exportado_vuelve_a_entrar_entero(session, proceso_completo):
+    """
+    El viaje completo: exportar, borrar y reimportar en una BD vacía. Es la
+    promesa de la plantilla —"descarga tu Excel y vuelve a subirlo"— así que si
+    algo se pierde por el camino tiene que fallar aquí.
+    """
+    contenido = ExportService.construir(session)
+
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as destino:
+        registros, _ = parsear_excel(io.BytesIO(contenido))
+        ImportadorExcel.importar(destino, registros)
+        ImportadorEstado.importar(
+            destino, io.BytesIO(contenido), OrganizacionService.actual(destino)
+        )
+
+        causas = CausaService.listar(destino, "M1.1")["ishikawa"]["Método"]
+        assert causas[0]["descripcion"] == "Sin procedimiento"
+        assert causas[0]["es_raiz"] is True
+
+        oportunidad = OportunidadService.listar(destino, "M1.1")[0]
+        assert oportunidad["descripcion"] == "Estandarizar"
+        assert oportunidad["factibilidad"] == 10
+
+        assert CambioService.listar(destino, "M1.1")["acciones"]["descongelar"][0][
+            "descripcion"
+        ] == "Sensibilizar al equipo"
+
+        proyectado = ComparacionService.comparacion(destino, "M1.1")["indicadores"][0]
+        assert proyectado["proyeccion"][0]["valor"] == 90
+        assert proyectado["nota"] == "Con el procedimiento estandarizado"
 
 
 def test_nombre_de_archivo_es_ascii(session):

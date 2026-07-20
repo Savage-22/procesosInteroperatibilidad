@@ -4,6 +4,7 @@ import PanelAnalisisIA from '../../../shared/components/PanelAnalisisIA'
 import SemaforoBadge from '../../../shared/components/SemaforoBadge'
 import { useDatos } from '../../../shared/hooks/useDatos'
 import InformeEjecutivo from '../components/InformeEjecutivo'
+import InformeModulo from '../components/InformeModulo'
 import TarjetaProceso from '../components/TarjetaProceso'
 import { obtenerResultados, porcentaje, getErrorMessage } from '../../tablero/services/tableroService'
 
@@ -103,6 +104,9 @@ export default function ResultadosPage() {
         </div>
     )
 
+    // Macroprocesos presentes (M1, M2…), derivados del código de cada proceso
+    const modulos = [...new Set(procesos.map((p) => p.codigo.split('.')[0]))].sort()
+
     const visibles = procesos.filter((p) => {
         if (filtro === 'con_mejora') return p.mejora.tiene_algo
         if (filtro === 'criticos') return p.indicadores.some((i) => i.semaforo === 'Rojo' || i.semaforo === 'Amarillo')
@@ -140,6 +144,8 @@ export default function ResultadosPage() {
             />
 
             <InformeEjecutivo />
+
+            <InformeModulo modulos={modulos} />
 
             <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3 flex-wrap">

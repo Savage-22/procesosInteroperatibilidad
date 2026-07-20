@@ -6,7 +6,7 @@ from modules.procesos.infrastructure.excel_reader import (
     _float_o_none,
     _int_o_none,
     meta_texto,
-    _normalizar,
+    normalizar,
 )
 
 ENCABEZADOS = [
@@ -32,8 +32,8 @@ def _excel_de_prueba(tmp_path, hojas: dict[str, list[list]]) -> str:
 
 
 def test_normalizar():
-    assert _normalizar("CÓDIGO DE\nPROCESO") == "codigo de proceso"
-    assert _normalizar("  AÑO ") == "ano"
+    assert normalizar("CÓDIGO DE\nPROCESO") == "codigo de proceso"
+    assert normalizar("  AÑO ") == "ano"
 
 
 def test_buscar_encabezado_encuentra_fila_y_columnas():

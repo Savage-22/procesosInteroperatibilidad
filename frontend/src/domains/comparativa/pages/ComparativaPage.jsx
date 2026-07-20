@@ -1,5 +1,7 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 
+import InformeIA from '../../../shared/components/InformeIA'
+import { obtenerInformeComparativa } from '../../../shared/services/analisisService'
 import { useDatos } from '../../../shared/hooks/useDatos'
 import ProcesoSelector from '../components/ProcesoSelector'
 import ComparativeLineChart from '../components/ComparativeLineChart'
@@ -45,6 +47,18 @@ export default function ComparativaPage() {
     const datosGrafico = useMemo(
         () => transformarParaGrafico(procesosSeleccionados),
         [procesosSeleccionados],
+    )
+
+    // El informe se archiva por el conjunto comparado, así que el alcance debe
+    // ser estable ante el orden en que el usuario marcó las casillas.
+    const codigosSeleccionados = useMemo(
+        () => procesosSeleccionados.map((p) => p.codigo).sort(),
+        [procesosSeleccionados],
+    )
+
+    const generarInforme = useCallback(
+        () => obtenerInformeComparativa(codigosSeleccionados),
+        [codigosSeleccionados],
     )
 
     if (isLoading) return (
@@ -93,6 +107,22 @@ export default function ComparativaPage() {
                     )}
                 </div>
             </div>
+
+            {/* Informe comparativo redactado por la IA sobre los procesos elegidos */}
+            <InformeIA
+                tipo="comparativa"
+                alcance={codigosSeleccionados.join(',')}
+                onGenerar={generarInforme}
+                icono="compare_arrows"
+                titulo="Informe comparativo"
+                descripcion={
+                    codigosSeleccionados.length >= 2
+                        ? `Qué diferencia a ${codigosSeleccionados.join(', ')}: quién lidera, quién se rezaga y qué replicar.`
+                        : 'Explica en qué se diferencian los procesos comparados y qué conviene replicar.'
+                }
+                deshabilitado={codigosSeleccionados.length < 2}
+                motivoDeshabilitado="Selecciona al menos 2 procesos para compararlos en un informe."
+            />
 
             {/* Tabla comparativa */}
             {procesosSeleccionados.length > 0 && (
