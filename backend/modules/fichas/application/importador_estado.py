@@ -1,4 +1,5 @@
 import logging
+import re
 
 import pandas as pd
 from sqlmodel import Session, select
@@ -6,11 +7,13 @@ from sqlmodel import Session, select
 from modules.fichas.application.cambio_service import ETAPAS
 from modules.fichas.application.causa_service import CATEGORIAS_6M
 from modules.fichas.application.oportunidad_service import ESTADOS, ESTRATEGIAS
+from modules.fichas.application.investigacion_service import TIPOS as TIPOS_INVESTIGACION
 from modules.fichas.infrastructure.models import (
     AccionCambio,
     Causa,
     FichaIndicador,
     FichaProceso,
+    Investigacion,
     Oportunidad,
     Organizacion,
     Proceso,
@@ -23,6 +26,9 @@ logger = logging.getLogger(__name__)
 
 # Separador con el que el export une las listas del SIPOC en una celda
 _SEP_LISTA = "|"
+
+# Código de macroproceso de la hoja Investigaciones: M1, M2… (sin subnivel)
+_PATRON_MACROPROCESO = re.compile(r"^M\d+$")
 
 # Encabezado de la hoja → campo del modelo. Se compara normalizado (minúsculas,
 # sin tildes), así que "Dueño" llega como "dueno" y "Categoria (6M)" como
@@ -57,6 +63,14 @@ _HOJAS = {
             "meta final": "meta_final", "relevancia": "relevancia",
             "objetivo estrategico": "objetivo_estrategico",
             "accion estrategica": "accion_estrategica",
+        },
+    },
+    "investigaciones": {
+        "columnas": {
+            "macroproceso": "macroproceso", "modulo": "macroproceso",
+            "titulo": "titulo", "autores": "autores", "ano": "anio",
+            "tipo": "tipo", "institucion": "institucion", "url": "url",
+            "enlace": "url", "aporte al macroproceso": "aporte", "aporte": "aporte",
         },
     },
     "ishikawa": {
@@ -251,6 +265,42 @@ class ImportadorEstado:
                 indicador.relevancia = relevancia
 
             session.add(indicador)
+            aplicadas += 1
+        return aplicadas, omitidas
+
+    @staticmethod
+    def _importar_investigaciones(session, filas, procesos, org) -> tuple[int, int]:
+        """
+        El sustento académico cuelga del macroproceso, así que no se valida
+        contra el inventario: basta que el módulo siga el patrón M<número>.
+        """
+        aplicadas = omitidas = 0
+        for fila in filas:
+            macroproceso = _texto(fila.get("macroproceso")).upper().split(".")[0]
+            titulo = _texto(fila.get("titulo"))
+            if not _PATRON_MACROPROCESO.match(macroproceso) or not titulo:
+                omitidas += 1
+                continue
+
+            investigacion = session.exec(
+                select(Investigacion).where(
+                    Investigacion.organizacion_id == org.id,
+                    Investigacion.macroproceso == macroproceso,
+                    Investigacion.titulo == titulo,
+                )
+            ).first()
+            if investigacion is None:
+                investigacion = Investigacion(
+                    organizacion_id=org.id, macroproceso=macroproceso, titulo=titulo,
+                )
+                session.add(investigacion)
+
+            for campo in ("autores", "institucion", "url", "aporte"):
+                setattr(investigacion, campo, _texto(fila.get(campo)) or None)
+            investigacion.tipo = _coincidencia(_texto(fila.get("tipo")), TIPOS_INVESTIGACION)
+            investigacion.anio = _entero(fila.get("anio"))
+            investigacion.activo = True
+            session.add(investigacion)
             aplicadas += 1
         return aplicadas, omitidas
 

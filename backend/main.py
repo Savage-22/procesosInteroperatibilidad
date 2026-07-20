@@ -18,6 +18,7 @@ from modules.fichas.application.sincronizador import Sincronizador
 from modules.fichas.http.ficha_proceso_router import router as ficha_proceso_router
 from modules.fichas.http.indicador_router import router as indicador_router
 from modules.fichas.http.inventario_router import router as inventario_router
+from modules.fichas.http.investigacion_router import router as investigacion_router
 from modules.fichas.http.mejora_router import router as mejora_router
 from modules.fichas.http.organizacion_router import router as organizacion_router
 from modules.fichas.infrastructure.database import init_db
@@ -79,6 +80,7 @@ app.include_router(ficha_proceso_router)
 app.include_router(indicador_router)
 app.include_router(organizacion_router)
 app.include_router(mejora_router)
+app.include_router(investigacion_router)
 app.include_router(anexos_router)
 app.include_router(export_router)
 app.include_router(tablero_router)
