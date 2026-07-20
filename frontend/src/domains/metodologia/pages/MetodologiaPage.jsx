@@ -4,6 +4,7 @@ import { useDatos } from '../../../shared/hooks/useDatos'
 import SemaforoBadge from '../../../shared/components/SemaforoBadge'
 import RelevanciaBadge from '../../../shared/components/RelevanciaBadge'
 import FormulaBox from '../components/FormulaBox'
+import InvestigacionesSection from '../components/InvestigacionesSection'
 import { getMetodologia } from '../api/metodologiaApi'
 
 // ---- helpers visuales -----------------------------------------------
@@ -463,7 +464,11 @@ export default function MetodologiaPage() {
             </div>
 
             <div className="space-y-3">
-                <Seccion titulo="Semáforo CEPLAN — umbrales de cumplimiento" icono="traffic" defaultOpen>
+                <Seccion titulo="Investigaciones que sustentan cada macroproceso" icono="menu_book" defaultOpen>
+                    <InvestigacionesSection />
+                </Seccion>
+
+                <Seccion titulo="Semáforo CEPLAN — umbrales de cumplimiento" icono="traffic">
                     <SeccionSemaforo data={semaforo} />
                 </Seccion>
 

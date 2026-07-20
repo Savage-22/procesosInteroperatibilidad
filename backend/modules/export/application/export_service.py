@@ -21,6 +21,7 @@ from modules.fichas.infrastructure.models import (
     Causa,
     FichaIndicador,
     FichaProceso,
+    Investigacion,
     Oportunidad,
     Proceso,
     Proyeccion,
@@ -81,6 +82,7 @@ class ExportService:
         _hoja(wb, "Inventario", *ExportService._inventario(procesos))
         _hoja(wb, "Fichas SIPOC", *ExportService._fichas(session, procesos))
         _hoja(wb, "Indicadores", *ExportService._indicadores(session, procesos))
+        _hoja(wb, "Investigaciones", *ExportService._investigaciones(session))
         _hoja(wb, "Ishikawa", *ExportService._causas(session, procesos))
         _hoja(wb, "Oportunidades", *ExportService._oportunidades(session, procesos))
         _hoja(wb, "Proyeccion", *ExportService._proyeccion(session, procesos))
@@ -228,6 +230,26 @@ class ExportService:
             "Codigo", "Indicador", "Tipo", "Sentido", "Unidad", "Formula", "Fuente",
             "Responsable", "Linea Base", "Meta Final", "Relevancia",
             "Objetivo Estrategico", "Accion Estrategica",
+        ]
+        return columnas, filas
+
+    @staticmethod
+    def _investigaciones(session: Session) -> tuple[list[str], list[list]]:
+        """Sustento académico de cada macroproceso. Cuelga del módulo, no del proceso."""
+        investigaciones = session.exec(
+            select(Investigacion).where(Investigacion.activo == True)  # noqa: E712
+        ).all()
+        filas = [
+            [
+                i.macroproceso, i.titulo, i.autores or "", i.anio, i.tipo or "",
+                i.institucion or "", i.url or "", i.aporte or "",
+            ]
+            for i in investigaciones
+        ]
+        filas.sort(key=lambda f: (f[0], -(f[3] or 0), f[1]))
+        columnas = [
+            "Macroproceso", "Titulo", "Autores", "Año", "Tipo", "Institucion",
+            "URL", "Aporte al macroproceso",
         ]
         return columnas, filas
 

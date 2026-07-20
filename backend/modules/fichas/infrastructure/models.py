@@ -245,6 +245,37 @@ class AccionCambio(SQLModel, table=True):
 
 
 # --------------------------------------------------------------------------- #
+# Sustento académico del macroproceso — N a 1 con Organizacion                 #
+# --------------------------------------------------------------------------- #
+
+class Investigacion(SQLModel, table=True):
+    """
+    Investigación (tesis, artículo, norma) que respalda un macroproceso.
+
+    Cuelga del macroproceso —M1, M2…— y no de un proceso del inventario: el
+    sustento se argumenta a nivel de módulo y debe poder registrarse aunque el
+    macroproceso todavía no exista como fila del Anexo 1.
+    """
+
+    __tablename__ = "investigacion"
+
+    id: int | None = Field(default=None, primary_key=True)
+    organizacion_id: int = Field(foreign_key="organizacion.id", index=True)
+
+    macroproceso: str = Field(index=True)      # M1, M2, M3, M4…
+    titulo: str
+    autores: str | None = None
+    anio: int | None = None
+    tipo: str | None = None                    # tesis | artículo | libro | informe | norma
+    institucion: str | None = None
+    url: str | None = None
+    aporte: str | None = None                  # qué del macroproceso sustenta
+    activo: bool = Field(default=True)
+    creado_en: datetime = Field(default_factory=_ahora)
+    actualizado_en: datetime = Field(default_factory=_ahora)
+
+
+# --------------------------------------------------------------------------- #
 # Salidas de la IA que el usuario quiere conservar (informes y análisis)       #
 # --------------------------------------------------------------------------- #
 

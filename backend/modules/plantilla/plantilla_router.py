@@ -229,6 +229,47 @@ _HOJAS_ESTADO = [
         )],
     ),
     (
+        "Investigaciones",
+        "Sustento académico del macroproceso: tesis, artículos o normas que respaldan "
+        "que el proceso está bien planteado. Cuelga del módulo (M1, M2…), no de un "
+        "proceso concreto. Conviene al menos una por macroproceso.",
+        [
+            ("Macroproceso", "Módulo que sustenta. Patrón M<número>. Ej: M1, M2, M3, M4"),
+            ("Titulo", "Título completo de la investigación"),
+            ("Autores", "Autor o autores, como aparecen en la fuente"),
+            ("Año", "Año de publicación. Ej: 2024"),
+            ("Tipo", "tesis | artículo | libro | informe | norma"),
+            ("Institucion", "Universidad, entidad o revista que la publica"),
+            ("URL", "Enlace al repositorio. Debe empezar con http:// o https://"),
+            ("Aporte al macroproceso", "Qué del macroproceso respalda esta investigación"),
+        ],
+        [
+            ("M1", "Modelo de plataforma de interoperabilidad basado en arquitectura orientada "
+             "a servicios para la transacción automática de datos entre entidades públicas",
+             "Vílchez Inga, César", 2020, "tesis",
+             "Universidad Nacional Federico Villarreal",
+             "https://repositorio.unfv.edu.pe/items/7f008a15-42a8-40df-a869-ec2ff0ccd5b0",
+             "Sustenta el diseño del servicio interoperable con estándares SOA (M1.3)"),
+            ("M2", "Mejoras en la implementación del proceso de interoperabilidad en las "
+             "entidades públicas",
+             "Salas Palomino, Fiorella; Giles Magallanes, Rosa", 2025, "tesis",
+             "Pontificia Universidad Católica del Perú",
+             "https://tesis.pucp.edu.pe/items/6bbc5f2a-feb0-4d90-86c7-5e507d423e91",
+             "Identifica las causas del fracaso en la implementación vía PIDE (M2.1 y M2.2)"),
+            ("M3", "Implementación de un sistema de interoperabilidad de información clínica "
+             "basado en los estándares internacionales HL7 FHIR y openEHR",
+             "Porras Gamarra, Hernán Johel", 2024, "tesis",
+             "Universidad Nacional Federico Villarreal",
+             "https://repositorio.unfv.edu.pe/handle/20.500.13084/9034",
+             "Caso de especificación técnica, APIs y pruebas de integración (M3.1 a M3.3)"),
+            ("M4", "Orquestación de servicios web utilizando Oracle BPEL Process Manager. "
+             "Aplicación a un caso práctico",
+             "Durango, José Ignacio", None, "tesis", "Escuela Politécnica Nacional",
+             "https://bibdigital.epn.edu.ec/handle/15000/542",
+             "Respalda la planificación y configuración de la orquestación (M4.1 y M4.2)"),
+        ],
+    ),
+    (
         "Proyeccion",
         "Mejora III — valor que se espera alcanzar mes a mes tras aplicar la mejora. "
         "Una fila por mes proyectado. Alimenta la comparación Antes/Después.",
