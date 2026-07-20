@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-import { analizar, obtenerEstadoIA, getErrorIA } from '../services/analisisService'
+import { analizar, obtenerEstadoIA, obtenerGuardado, getErrorIA } from '../services/analisisService'
 
 const SEVERIDAD = {
     alta:  { badge: 'bg-[#ffe8e8] text-[#9c1d1d]', icono: 'priority_high', borde: 'border-[#9c1d1d]/30' },
@@ -92,10 +92,21 @@ export default function PanelAnalisisIA({ seccion, codigo, periodo, titulo = 'An
 
     // El análisis se guarda junto a los parámetros con los que se pidió: si el
     // usuario cambia de proceso o de periodo, el anterior deja de mostrarse sin
-    // necesidad de un efecto que lo limpie.
+    // necesidad de un efecto que lo limpie. La misma clave es el alcance con el
+    // que el servidor lo archiva.
     const clave = `${seccion}|${codigo ?? ''}|${periodo ?? ''}`
     const analisis = generado?.clave === clave ? generado.datos : null
     const errorVigente = error?.clave === clave ? error.mensaje : null
+
+    // Recupera el análisis ya archivado para estos parámetros, para que cambiar
+    // de vista no obligue a pagar otra llamada al proveedor.
+    useEffect(() => {
+        let activo = true
+        obtenerGuardado('seccion', clave).then((guardado) => {
+            if (activo && guardado) setGenerado({ clave, datos: guardado.contenido })
+        })
+        return () => { activo = false }
+    }, [clave])
 
     async function generar() {
         setCargando(true)

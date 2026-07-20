@@ -242,3 +242,34 @@ class AccionCambio(SQLModel, table=True):
     activo: bool = Field(default=True)
     creado_en: datetime = Field(default_factory=_ahora)
     actualizado_en: datetime = Field(default_factory=_ahora)
+
+
+# --------------------------------------------------------------------------- #
+# Salidas de la IA que el usuario quiere conservar (informes y análisis)       #
+# --------------------------------------------------------------------------- #
+
+class Informe(SQLModel, table=True):
+    """
+    Informe o análisis generado por la IA, guardado para que sobreviva al cambio
+    de vista y a la recarga: redactarlo cuesta una llamada facturada, así que
+    perderlo al navegar era el peor comportamiento posible.
+
+    Se conserva un único informe vigente por (tipo, alcance): regenerar
+    reemplaza al anterior, que es lo que el usuario espera del botón "Regenerar".
+    """
+
+    __tablename__ = "informe"
+
+    id: int | None = Field(default=None, primary_key=True)
+    organizacion_id: int = Field(foreign_key="organizacion.id", index=True)
+
+    tipo: str = Field(index=True)   # ejecutivo | modulo | comparativa | seccion
+    # Qué abarca: "" (todo), "M1", "M1,M2,M3" para la comparativa, o
+    # "seccion|codigo|periodo" para los paneles de análisis.
+    alcance: str = Field(default="", index=True)
+    periodo: str | None = None
+    titulo: str | None = None
+    contenido: dict = Field(default_factory=dict, sa_column=Column(JSON))
+
+    creado_en: datetime = Field(default_factory=_ahora)
+    actualizado_en: datetime = Field(default_factory=_ahora)

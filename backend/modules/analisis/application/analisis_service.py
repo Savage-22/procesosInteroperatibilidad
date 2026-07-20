@@ -1,6 +1,7 @@
 from sqlmodel import Session, select
 
 from modules.analisis.application.contexto_service import ContextoService
+from modules.analisis.application.informe_service import InformeService
 from modules.fichas.application.cambio_service import ETAPAS, CambioService
 from modules.fichas.application.causa_service import CATEGORIAS_6M, CausaService
 from modules.fichas.application.comparacion_service import ComparacionService
@@ -69,6 +70,28 @@ _ESQUEMA_ANALISIS = """{
   ]
 }"""
 
+# Los tres informes (ejecutivo, por módulo y comparativo) comparten formato para
+# que el frontend los renderice y los imprima con el mismo componente.
+_ESQUEMA_INFORME = """{
+  "titulo": "título del informe",
+  "resumen_ejecutivo": "3 a 4 frases: dónde se está y qué decisión se requiere",
+  "secciones": [
+    {"titulo": "nombre de la sección", "contenido": "2 a 4 párrafos cortos con cifras"}
+  ],
+  "riesgos": [{"riesgo": "…", "impacto": "alto"|"medio"|"bajo", "mitigacion": "…"}],
+  "prioridades": [{"orden": 1, "accion": "…", "responsable_sugerido": "…", "plazo": "…"}],
+  "conclusion": "cierre en 2 frases"
+}"""
+
+
+def clave_seccion(seccion: str, codigo: str | None, periodo: str | None) -> str:
+    """
+    Alcance con el que se archiva un análisis de sección. Incluye proceso y
+    periodo porque el análisis del tablero de S1 no es el mismo que el de S2 ni
+    el de la mejora de M1.1 el mismo que el de M2.3.
+    """
+    return f"{seccion}|{codigo or ''}|{periodo or ''}"
+
 
 class AnalisisService:
     """
@@ -108,13 +131,18 @@ class AnalisisService:
             f"{_ESQUEMA_ANALISIS}"
         )
         resultado = completar_json(_ROL, prompt, max_tokens=1400)
-        return {
+        analisis = {
             "seccion": seccion,
             "codigo": codigo,
             "diagnostico": resultado.get("diagnostico", ""),
             "hallazgos": resultado.get("hallazgos", []),
             "recomendaciones": resultado.get("recomendaciones", []),
         }
+        InformeService.guardar(
+            session, "seccion", analisis,
+            alcance=clave_seccion(seccion, codigo, periodo), periodo=periodo,
+        )
+        return analisis
 
     @staticmethod
     def _contexto(session: Session, seccion: str, codigo: str | None, periodo: str | None) -> str:
@@ -132,7 +160,7 @@ class AnalisisService:
         return ContextoService.mejora(session, codigo)
 
     # ------------------------------------------------------------------ #
-    # Informe ejecutivo global                                           #
+    # Informes                                                           #
     # ------------------------------------------------------------------ #
 
     @staticmethod
@@ -142,22 +170,67 @@ class AnalisisService:
             "Redacta el informe ejecutivo del estado institucional de interoperabilidad, "
             "dirigido a la alta dirección de la entidad. Usa solo los datos entregados.\n\n"
             f"DATOS:\n{contexto}\n\n"
-            "Esquema de respuesta:\n"
-            """{
-  "titulo": "título del informe",
-  "resumen_ejecutivo": "3 a 4 frases: dónde está la entidad y qué decisión requiere",
-  "secciones": [
-    {"titulo": "nombre de la sección", "contenido": "2 a 4 párrafos cortos con cifras"}
-  ],
-  "riesgos": [{"riesgo": "…", "impacto": "alto"|"medio"|"bajo", "mitigacion": "…"}],
-  "prioridades": [{"orden": 1, "accion": "…", "responsable_sugerido": "…", "plazo": "…"}],
-  "conclusion": "cierre en 2 frases"
-}
-
-Incluye al menos estas secciones: estado general del seguimiento, procesos críticos, \
-proyección al cierre del año, y avance del ciclo de mejora."""
+            f"Esquema de respuesta:\n{_ESQUEMA_INFORME}\n\n"
+            "Incluye al menos estas secciones: estado general del seguimiento, procesos "
+            "críticos, proyección al cierre del año, y avance del ciclo de mejora."
         )
-        return completar_json(_ROL, prompt, max_tokens=2200)
+        redactado = completar_json(_ROL, prompt, max_tokens=2200)
+        InformeService.guardar(session, "ejecutivo", redactado, periodo=periodo)
+        return redactado
+
+    @staticmethod
+    def informe_modulo(session: Session, modulo: str, periodo: str | None = None) -> dict:
+        """
+        Informe de un macroproceso (M1, M2, M3, M4). Mismo formato que el
+        ejecutivo, pero acotado a los procesos del módulo: es el nivel al que
+        responde el responsable del macroproceso, no la alta dirección.
+        """
+        modulo = (modulo or "").strip().upper()
+        disponibles = ContextoService.modulos_disponibles()
+        if modulo not in disponibles:
+            raise ErrorValidacion(
+                f"Módulo '{modulo}' sin datos. Disponibles: {', '.join(disponibles) or 'ninguno'}"
+            )
+
+        contexto = ContextoService.modulo(session, modulo)
+        prompt = (
+            f"Redacta el informe de gestión del macroproceso {modulo}, dirigido a su "
+            "responsable. Usa solo los datos entregados y céntrate exclusivamente en "
+            "los procesos de este módulo; no hables de la entidad en general.\n\n"
+            f"DATOS:\n{contexto}\n\n"
+            f"Esquema de respuesta:\n{_ESQUEMA_INFORME}\n\n"
+            f"Incluye al menos estas secciones: desempeño del módulo {modulo} y de cada "
+            "uno de sus procesos, procesos que arrastran el resultado del módulo, "
+            "proyección al cierre del año, y estado del ciclo de mejora del módulo."
+        )
+        redactado = completar_json(_ROL, prompt, max_tokens=2200)
+        InformeService.guardar(session, "modulo", redactado, alcance=modulo, periodo=periodo)
+        return redactado
+
+    @staticmethod
+    def informe_comparativa(session: Session, codigos: list[str]) -> dict:
+        """Informe que explica en qué se diferencian los procesos comparados."""
+        elegidos = [c.strip().upper() for c in codigos if (c or "").strip()]
+        if len(elegidos) < 2:
+            raise ErrorValidacion("La comparativa necesita al menos 2 procesos")
+
+        contexto = ContextoService.comparativa(elegidos)
+        prompt = (
+            "Redacta el informe comparativo de los procesos seleccionados. Explica en "
+            "qué se diferencian entre sí: quién lidera, quién queda atrás, si la brecha "
+            "se abre o se cierra con los meses, y qué prácticas del proceso líder "
+            "convendría replicar en los rezagados. Usa solo los datos entregados y "
+            "compara siempre entre ellos, no contra el resto de la entidad.\n\n"
+            f"DATOS:\n{contexto}\n\n"
+            f"Esquema de respuesta:\n{_ESQUEMA_INFORME}\n\n"
+            "Incluye al menos estas secciones: ranking y lectura general, evolución de "
+            "la brecha mes a mes, y qué replicar del proceso con mejor desempeño."
+        )
+        redactado = completar_json(_ROL, prompt, max_tokens=2200)
+        InformeService.guardar(
+            session, "comparativa", redactado, alcance=",".join(sorted(elegidos)),
+        )
+        return redactado
 
     # ------------------------------------------------------------------ #
     # Asistencia contextual — onboarding                                 #

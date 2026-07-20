@@ -33,17 +33,19 @@ El script crea el venv, instala dependencias y levanta ambos servidores:
 
 - **Dashboard** (`/`) — KPIs globales, distribución de semáforo por proceso y tabla resumen ordenable
 - **Tablero de control** (`/tablero`) — monitoreo indicador por indicador: valor actual vs. meta, avance, semáforo, tendencia, cumplimiento del compromiso mensual y alerta de indicadores en rojo sin plan de mejora. Filtrable por semáforo y por semestre
-- **Resultados del análisis** (`/resultados`) — resultado de cada indicador y efecto de las mejoras aplicadas: comparación antes/después, causas raíz, oportunidades implementadas y avance de la gestión del cambio, más el **informe ejecutivo** generado por IA
+- **Resultados del análisis** (`/resultados`) — resultado de cada indicador y efecto de las mejoras aplicadas: comparación antes/después, causas raíz, oportunidades implementadas y avance de la gestión del cambio, más el **informe ejecutivo** y un **informe por macroproceso** (M1, M2, M3, M4) generados por IA
 - **Anexos** (`/anexos`) — vista previa imprimible de los Anexos 1 (inventario), 2 (ficha SIPOC) y 4 (ficha de indicadores) con el formato de la directiva. El botón "Descargar PDF" usa la impresión del navegador
 - **Bitácora** (`/bitacora`) — registro de las 9 fases metodológicas del trabajo; el estado de cada fase se deriva de la evidencia realmente cargada en el sistema, así que nunca queda desincronizada
 - **Asistente guiado** (`/onboarding`) — 6 pasos para dejar el tablero operativo desde cero, con sugerencias de la IA para el SIPOC y los indicadores
 - **Detalle de proceso** (`/proceso/:codigo`) — resultado obtenido vs esperado, avance T1 mensual con umbrales 95/75 y tabla de datos
-- **Comparativa** (`/comparativa`) — líneas superpuestas de avance T1 con selector múltiple por módulo y leyenda interactiva
+- **Comparativa** (`/comparativa`) — líneas superpuestas de avance T1 con selector múltiple por módulo y leyenda interactiva, más un **informe comparativo** por IA que explica quién lidera, quién se rezaga y qué conviene replicar
 - **Pareto** (`/pareto`) — ranking de criticidad por *brecha de avance* (100 − avance T1 promedio): identifica los procesos que concentran el 80% del incumplimiento respecto a lo esperado **a la fecha**, alineado con el semáforo
 - **Predicciones** (`/predicciones`) — proyección del resultado de cada proceso hasta diciembre mediante regresión lineal sobre los meses reportados: tendencia, valor estimado a fin de año, mes en que cruza la meta y nivel de confiabilidad (R²)
 - **Análisis con IA** — botón *Analizar* en el tablero, resultados, Pareto, predicciones y en el módulo de mejora: la IA lee los datos reales de esa sección y devuelve diagnóstico, hallazgos priorizados por severidad y recomendaciones accionables. También propone causas Ishikawa, indicadores y contenido SIPOC; nada se guarda sin que el usuario lo confirme
+- **Informes que no se pierden** — cada informe y cada análisis de IA se archiva en la base al generarlo y se recupera al volver a la vista: cambiar de pantalla o recargar ya no obliga a pagar otra llamada al proveedor. El botón *Regenerar* lo reemplaza y *Descartar* lo borra
 - **Recarga en caliente** — al editar y guardar el Excel, el backend recarga los datos y el frontend se refresca solo (sin reiniciar nada)
 - **Carga desde la interfaz** — botón "Cargar Excel" en el navbar que sube un nuevo archivo de datos (`POST /api/upload`) y refresca todas las vistas al instante
+- **Excel de ida y vuelta** — "Exportar Excel" descarga todo el estado del sistema (mediciones, inventario, fichas SIPOC, indicadores, Ishikawa, oportunidades, proyección y plan de Lewin) y ese mismo libro se puede volver a subir sin perder nada. La plantilla descargable trae esas mismas hojas documentadas y con ejemplos, para que una entidad nueva llegue con todo cargado
 
 ### Semáforo CEPLAN
 
@@ -228,6 +230,11 @@ npm run dev
 | GET | `/api/analisis/estado` | Si la IA está configurada en este servidor |
 | POST | `/api/analisis/seccion/{seccion}` | Análisis de una sección (`tablero`, `resultados`, `pareto`, `predicciones`, `mejora`) |
 | GET | `/api/analisis/informe` | Informe ejecutivo global del estado institucional |
+| GET | `/api/analisis/informe/modulo/{modulo}` | Informe de gestión de un macroproceso (`M1`…`M4`) |
+| POST | `/api/analisis/informe/comparativa` | Informe comparativo de los procesos seleccionados |
+| GET | `/api/analisis/guardados` | Índice de los informes y análisis ya archivados |
+| GET | `/api/analisis/guardados/{tipo}?alcance=` | Último informe archivado de ese tipo y alcance |
+| DELETE | `/api/analisis/guardados/{tipo}?alcance=` | Descarta un informe archivado |
 | POST | `/api/analisis/sugerir/indicadores/{codigo}` | Indicadores propuestos para un proceso |
 | POST | `/api/analisis/sugerir/sipoc/{codigo}` | Caracterización SIPOC propuesta |
 | POST | `/api/analisis/sugerir/causas/{codigo}` | Causas Ishikawa y oportunidades propuestas |
@@ -249,6 +256,23 @@ Un archivo `datos_estandarizados.xlsx` con **una hoja por equipo/módulo** (el n
 - Las filas que no son datos (notas, tablas auxiliares de fórmulas) se descartan automáticamente
 
 Si falta una hoja o el archivo, el servidor arranca igual con los datos disponibles y la interfaz muestra una advertencia no bloqueante.
+
+### Hojas del resto del estado (opcionales)
+
+Además de las mediciones, el libro puede traer el trabajo que se hace dentro del sistema. Son las mismas hojas que produce "Exportar Excel", con los mismos encabezados, así que **el libro exportado se vuelve a subir tal cual**:
+
+| Hoja | Qué trae |
+|---|---|
+| `Organizacion` | Nombre y sector de la entidad |
+| `Inventario` | Anexo 1: jerarquía, producto y base legal de cada proceso |
+| `Fichas SIPOC` | Anexo 2: caracterización; las listas van en una celda separadas por `\|` |
+| `Indicadores` | Anexo 4: tipo, fórmula, fuente, responsable y línea base |
+| `Ishikawa` | Causas 6M, cuáles son raíz y su peso |
+| `Oportunidades` | Oportunidades con costo, impacto, probabilidad y consecuencia |
+| `Proyeccion` | Valor proyectado por mes tras la mejora (alimenta Antes/Después) |
+| `Gestion del cambio` | Plan de Lewin: etapa, acción, responsable, fecha y estado |
+
+Las hojas calculadas del export (`Resumen`, `Antes-Despues`) y las columnas calculadas (Avance T1, Semáforo, Factibilidad, Nivel de riesgo) se ignoran al reimportar. La importación es **idempotente**: se actualiza por código de proceso, nombre de indicador y mes, así que resubir el mismo archivo no duplica nada. Las filas cuyo código no exista se omiten sin abortar la importación.
 
 ## Tests
 

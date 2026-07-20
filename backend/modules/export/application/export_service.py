@@ -23,6 +23,7 @@ from modules.fichas.infrastructure.models import (
     FichaProceso,
     Oportunidad,
     Proceso,
+    Proyeccion,
 )
 from modules.procesos.application.proceso_service import ProcesoService
 from shared.meses import orden_mes
@@ -75,12 +76,14 @@ class ExportService:
         }
 
         _hoja(wb, "Resumen", *ExportService._resumen(session, procesos))
+        _hoja(wb, "Organizacion", *ExportService._organizacion(session))
         _hoja(wb, "Datos", _COLUMNAS_DATOS, ExportService._datos(session))
         _hoja(wb, "Inventario", *ExportService._inventario(procesos))
         _hoja(wb, "Fichas SIPOC", *ExportService._fichas(session, procesos))
         _hoja(wb, "Indicadores", *ExportService._indicadores(session, procesos))
         _hoja(wb, "Ishikawa", *ExportService._causas(session, procesos))
         _hoja(wb, "Oportunidades", *ExportService._oportunidades(session, procesos))
+        _hoja(wb, "Proyeccion", *ExportService._proyeccion(session, procesos))
         _hoja(wb, "Antes-Despues", *ExportService._comparacion(session, procesos))
         _hoja(wb, "Gestion del cambio", *ExportService._cambio(session, procesos))
 
@@ -141,6 +144,38 @@ class ExportService:
             "Tiene plan de cambio",
         ]
         return columnas, filas
+
+    @staticmethod
+    def _organizacion(session: Session) -> tuple[list[str], list[list]]:
+        """Identidad de la entidad, para que al reimportar el libro no se pierda."""
+        org = OrganizacionService.actual(session)
+        return ["Nombre", "Sector"], [[org.nombre, org.sector or ""]]
+
+    @staticmethod
+    def _proyeccion(session: Session, procesos: dict) -> tuple[list[str], list[list]]:
+        """
+        Los meses proyectados tras la mejora, uno por fila. La hoja
+        Antes-Despues resume el efecto, pero es calculada; esta trae el dato
+        crudo, que es el que se puede volver a importar.
+        """
+        indicadores = {
+            ind.id: ind for ind in session.exec(
+                select(FichaIndicador).where(FichaIndicador.activo == True)  # noqa: E712
+            ).all()
+        }
+        filas = []
+        for p in session.exec(select(Proyeccion)).all():
+            indicador = indicadores.get(p.indicador_id)
+            proceso = procesos.get(indicador.proceso_id) if indicador else None
+            if proceso is None:
+                continue
+            for mes in p.meses or []:
+                filas.append([
+                    proceso.codigo, indicador.nombre, mes.get("mes", ""),
+                    mes.get("anio"), mes.get("valor"), p.nota or "",
+                ])
+        filas.sort(key=lambda f: (f[0], f[1], orden_mes(f[2])))
+        return ["Codigo", "Indicador", "Mes", "Año", "Valor Proyectado", "Nota"], filas
 
     @staticmethod
     def _inventario(procesos: dict) -> tuple[list[str], list[list]]:

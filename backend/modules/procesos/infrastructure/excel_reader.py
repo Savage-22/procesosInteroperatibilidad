@@ -26,13 +26,13 @@ _PATRON_CODIGO = re.compile(r"^M\d+\.\d+$")
 _CAMPOS_MINIMOS = {"codigo_proceso", "mes", "resultado_esperado"}
 
 
-def _normalizar(texto) -> str:
+def normalizar(texto) -> str:
     """Minúsculas, sin tildes y con espacios colapsados, para comparar encabezados."""
     plano = unicodedata.normalize("NFKD", str(texto)).encode("ascii", "ignore").decode()
     return " ".join(plano.lower().split())
 
 
-def _str_o_vacio(valor) -> str:
+def str_o_vacio(valor) -> str:
     if valor is None or pd.isna(valor):
         return ""
     return str(valor).strip()
@@ -61,7 +61,7 @@ def _mapear_columnas(fila) -> dict[str, int]:
     """
     indices: dict[str, int] = {}
     for i in range(len(fila)):
-        h = _normalizar(_str_o_vacio(fila.iloc[i]))
+        h = normalizar(str_o_vacio(fila.iloc[i]))
         if not h:
             continue
         if "codigo" in h:
@@ -154,16 +154,16 @@ def _parsear_hoja(df_raw: pd.DataFrame, hoja: str) -> tuple[list[dict], list[str
 
     for i in range(fila_encabezado + 1, len(df_raw)):
         fila = df_raw.iloc[i]
-        codigo = _str_o_vacio(valor(fila, "codigo_proceso")).upper()
-        mes = _str_o_vacio(valor(fila, "mes")).capitalize()
+        codigo = str_o_vacio(valor(fila, "codigo_proceso")).upper()
+        mes = str_o_vacio(valor(fila, "mes")).capitalize()
 
         # Solo filas de datos reales: descarta notas, tablas auxiliares y vacíos
         if not _PATRON_CODIGO.match(codigo) or mes not in ORDEN_MESES:
             continue
 
-        sentido = _str_o_vacio(valor(fila, "sentido"))
+        sentido = str_o_vacio(valor(fila, "sentido"))
         es_descendente = "descendente" in sentido.lower()
-        unidad = _str_o_vacio(valor(fila, "unidad"))
+        unidad = str_o_vacio(valor(fila, "unidad"))
 
         meta_final = _float_o_none(valor(fila, "meta_final"))
         numerador = _float_o_none(valor(fila, "numerador"))
@@ -185,10 +185,10 @@ def _parsear_hoja(df_raw: pd.DataFrame, hoja: str) -> tuple[list[dict], list[str
 
         registros.append({
             "codigo_proceso": codigo,
-            "proceso": _str_o_vacio(valor(fila, "proceso")),
-            "indicador": _str_o_vacio(valor(fila, "indicador")),
-            "objetivo_estrategico": _str_o_vacio(valor(fila, "objetivo_estrategico")),
-            "accion_estrategica": _str_o_vacio(valor(fila, "accion_estrategica")),
+            "proceso": str_o_vacio(valor(fila, "proceso")),
+            "indicador": str_o_vacio(valor(fila, "indicador")),
+            "objetivo_estrategico": str_o_vacio(valor(fila, "objetivo_estrategico")),
+            "accion_estrategica": str_o_vacio(valor(fila, "accion_estrategica")),
             "sentido": sentido or "Ascendente",
             "unidad": unidad,
             "meta_texto": meta_texto(meta_final, unidad, es_descendente),

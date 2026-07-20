@@ -4,7 +4,9 @@ import os
 from sqlmodel import Session
 
 from modules.fichas.application.importador import ImportadorExcel
+from modules.fichas.application.importador_estado import ImportadorEstado
 from modules.fichas.application.lectura_bd import LecturaBD
+from modules.fichas.application.organizacion_service import OrganizacionService
 from modules.fichas.infrastructure.database import engine
 from modules.procesos.infrastructure.excel_reader import ExcelStore, parsear_excel
 
@@ -39,8 +41,7 @@ class Sincronizador:
         with Session(engine) as session:
             if cls._ruta and os.path.exists(cls._ruta) and not LecturaBD.hay_datos(session):
                 try:
-                    registros, _ = parsear_excel(cls._ruta)
-                    resumen = ImportadorExcel.importar(session, registros)
+                    resumen = cls._importar(session, cls._ruta)
                     logger.info(f"Semilla inicial importada a la BD: {resumen}")
                 except Exception as e:
                     logger.error(f"No se pudo importar la semilla inicial: {e}")
@@ -50,8 +51,7 @@ class Sincronizador:
     def importar_archivo(cls, ruta: str) -> dict:
         """Importa/actualiza un Excel a la BD y rehidrata el store. Devuelve el resumen."""
         with Session(engine) as session:
-            registros, _ = parsear_excel(ruta)
-            resumen = ImportadorExcel.importar(session, registros)
+            resumen = cls._importar(session, ruta)
             cls._rehidratar(session)
         # Evita que el vigilante reimporte la misma versión recién escrita
         if ruta == cls._ruta and os.path.exists(ruta):
@@ -83,6 +83,21 @@ class Sincronizador:
         """Reconstruye el store en memoria desde la BD. Se llama al editar fichas."""
         with Session(engine) as session:
             cls._rehidratar(session)
+
+    @classmethod
+    def _importar(cls, session: Session, ruta: str) -> dict:
+        """
+        Un libro entra en dos pasadas: primero las mediciones —que crean los
+        procesos e indicadores— y después el resto del estado, que necesita que
+        esos procesos ya existan para colgarse de ellos. Un libro que solo trae
+        la hoja de datos sigue funcionando: la segunda pasada no encuentra nada
+        que leer y no hace nada.
+        """
+        registros, _ = parsear_excel(ruta)
+        resumen = ImportadorExcel.importar(session, registros)
+        org = OrganizacionService.actual(session)
+        resumen["estado"] = ImportadorEstado.importar(session, ruta, org)
+        return resumen
 
     @classmethod
     def _rehidratar(cls, session: Session) -> None:

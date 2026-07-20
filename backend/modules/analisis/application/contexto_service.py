@@ -10,11 +10,18 @@ from modules.procesos.application.proceso_service import ProcesoService
 from modules.procesos.infrastructure.excel_reader import ExcelStore
 from modules.tablero.application.resultados_service import ResultadosService
 from modules.tablero.application.tablero_service import TableroService
+from shared.meses import ordenar_por_mes
 from shared.semaforo import calcular_semaforo
 
 
 def _n(valor, sufijo="") -> str:
     return f"{valor}{sufijo}" if valor is not None else "sin dato"
+
+
+def _pct(valor) -> str:
+    """Porcentaje con un decimal: el avance T1 se calcula con cuatro y en el
+    prompt esa precisión solo gasta tokens y ensucia la lectura del modelo."""
+    return f"{valor:.1f}%" if valor is not None else "sin dato"
 
 
 class ContextoService:
@@ -192,6 +199,168 @@ class ContextoService:
         for etapa, acciones in cambio["acciones"].items():
             for a in acciones:
                 lineas.append(f"- [{etapa}] {a['descripcion']} — {a['estado']}")
+
+        return "\n".join(lineas)
+
+    # ------------------------------------------------------------------ #
+    # Por módulo — para el informe de M1, M2, M3 o M4                    #
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def modulos_disponibles() -> list[str]:
+        return sorted({r["modulo"] for r in ExcelStore.get_all()})
+
+    @staticmethod
+    def modulo(session: Session, modulo: str) -> str:
+        """
+        Estado de un macroproceso completo: sus procesos con avance mes a mes,
+        su proyección a diciembre y en qué punto del ciclo de mejora va cada uno.
+        """
+        modulo = modulo.upper()
+        registros = [r for r in ExcelStore.get_all() if r["modulo"] == modulo]
+        if not registros:
+            return f"El módulo {modulo} no tiene procesos con mediciones cargadas."
+
+        grupos: dict[str, list[dict]] = {}
+        for r in registros:
+            grupos.setdefault(r["codigo_proceso"], []).append(r)
+
+        ponderadores = ProcesoService.calcular_ponderadores(
+            {c: regs[0].get("relevancia", 1) for c, regs in grupos.items()}
+        )
+
+        avances = {
+            c: ProcesoService.calcular_promedios(regs)["promedio_avance_t1"]
+            for c, regs in grupos.items()
+        }
+        con_dato = {c: a for c, a in avances.items() if a is not None}
+        pesos = sum(ponderadores.get(c, 0.0) for c in con_dato)
+        ponderado = (
+            round(sum(a * ponderadores.get(c, 0.0) for c, a in con_dato.items()) / pesos, 1)
+            if pesos else None
+        )
+
+        lineas = [
+            f"MÓDULO {modulo} — {len(grupos)} proceso(s)",
+            f"Avance T1 ponderado por relevancia: {_n(ponderado, '%')} "
+            f"({calcular_semaforo(ponderado)})",
+            "",
+            "PROCESOS DEL MÓDULO:",
+        ]
+
+        for codigo, regs in sorted(grupos.items()):
+            avance = avances[codigo]
+            primero = regs[0]
+            lineas.append(
+                f"\n- {codigo} {primero['proceso']} | indicador: {primero['indicador'] or '—'}"
+                f" | meta {primero['meta_texto'] or _n(primero['meta_final'])}"
+                f" | relevancia {primero.get('relevancia', 1)}"
+                f" (ponderador {ponderadores.get(codigo, 0):.2f})"
+                f" | avance T1 promedio {_pct(avance)} ({calcular_semaforo(avance)})"
+            )
+            for r in ordenar_por_mes(regs):
+                mensual = ProcesoService.calcular_avance_t1(
+                    r.get("resultado_obtenido"), r.get("resultado_esperado"),
+                    r.get("es_descendente", False),
+                )
+                lineas.append(
+                    f"    · {r['mes']}: obtenido {_n(r['resultado_obtenido'])} vs "
+                    f"esperado {_n(r['resultado_esperado'])} → avance {_pct(mensual)}"
+                    f" ({calcular_semaforo(mensual)})"
+                )
+            pred = ProcesoService.calcular_prediccion(regs)
+            if pred is None:
+                lineas.append("    proyección: sin datos suficientes (mín. 2 meses)")
+            else:
+                estado = (
+                    "ALCANZARÁ la meta" if pred["alcanzara_meta"]
+                    else "NO alcanzará la meta" if pred["alcanzara_meta"] is False
+                    else "meta no definida"
+                )
+                lineas.append(
+                    f"    proyección a diciembre: {_n(pred['valor_diciembre'])} "
+                    f"(tendencia {pred['tendencia']}, R²={pred['r_cuadrado']}) → {estado}"
+                )
+
+        # Estado del ciclo de mejora, reutilizando el consolidado ya validado
+        del_modulo = [
+            p for p in ResultadosService.consolidado(session)["procesos"]
+            if p["codigo"].split(".")[0] == modulo
+        ]
+        if del_modulo:
+            lineas.append("\nCICLO DE MEJORA EN EL MÓDULO:")
+            for p in del_modulo:
+                m = p["mejora"]
+                lineas.append(
+                    f"- {p['codigo']}: etapa {m['etapa']} | causas {m['causas']} "
+                    f"(raíz {m['causas_raiz']}) | oportunidades {m['oportunidades']} "
+                    f"(implementadas {m['implementadas']}) | "
+                    f"acciones de cambio {m['acciones_hechas']}/{m['acciones']}"
+                )
+                if p["causas_raiz"]:
+                    lineas.append(f"    causas raíz: {'; '.join(p['causas_raiz'][:5])}")
+
+        return "\n".join(lineas)
+
+    # ------------------------------------------------------------------ #
+    # Comparativa entre procesos seleccionados                           #
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def comparativa(codigos: list[str]) -> str:
+        """
+        Los procesos elegidos en la comparativa, lado a lado: su avance mes a
+        mes y su posición relativa, que es lo que el gráfico muestra y lo que
+        el informe tiene que explicar.
+        """
+        pedidos = [c.upper() for c in codigos]
+        grupos: dict[str, list[dict]] = {}
+        for r in ExcelStore.get_all():
+            if r["codigo_proceso"] in pedidos:
+                grupos.setdefault(r["codigo_proceso"], []).append(r)
+
+        if not grupos:
+            return "Ninguno de los procesos seleccionados tiene mediciones cargadas."
+
+        avances = {
+            c: ProcesoService.calcular_promedios(regs)["promedio_avance_t1"]
+            for c, regs in grupos.items()
+        }
+        ranking = sorted(
+            avances.items(),
+            key=lambda par: par[1] if par[1] is not None else -1,
+            reverse=True,
+        )
+
+        lineas = [
+            f"COMPARATIVA DE {len(grupos)} PROCESOS — avance T1 (%) mes a mes",
+            "",
+            "RANKING POR AVANCE T1 PROMEDIO:",
+        ]
+        for puesto, (codigo, avance) in enumerate(ranking, start=1):
+            lineas.append(
+                f"{puesto}. {codigo} {grupos[codigo][0]['proceso']} "
+                f"({grupos[codigo][0]['modulo']}): {_n(avance, '%')} "
+                f"({calcular_semaforo(avance)})"
+            )
+
+        con_dato = [a for a in avances.values() if a is not None]
+        if len(con_dato) > 1:
+            lineas.append(
+                f"\nDispersión: mejor {max(con_dato)}% vs peor {min(con_dato)}% "
+                f"→ brecha de {round(max(con_dato) - min(con_dato), 1)} pp entre extremos."
+            )
+
+        lineas.append("\nAVANCE T1 MES A MES:")
+        for codigo, regs in sorted(grupos.items()):
+            serie = []
+            for r in ordenar_por_mes(regs):
+                mensual = ProcesoService.calcular_avance_t1(
+                    r.get("resultado_obtenido"), r.get("resultado_esperado"),
+                    r.get("es_descendente", False),
+                )
+                serie.append(f"{r['mes']} {_pct(mensual)}")
+            lineas.append(f"- {codigo}: {' | '.join(serie) or 'sin mediciones'}")
 
         return "\n".join(lineas)
 

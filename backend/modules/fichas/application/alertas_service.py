@@ -23,10 +23,15 @@ class AlertasMejoraService:
 
     Evaluación **semestral**: para cada indicador se toma el desempeño en el
     **mes de corte** —el último mes con dato dentro del periodo (Ene–Jun)— y se
-    compara el valor obtenido contra la **meta final** (no el esperado mensual),
-    aplicando el semáforo CEPLAN. Si en el mes de corte no llegó a la meta
-    (semáforo Ámbar/Rojo) el proceso entra a la lista de mejora, priorizado por
-    urgencia y con el siguiente paso sugerido según lo que aún falte.
+    calcula su avance T1 (obtenido vs. **esperado de ese mes**), el mismo
+    criterio que usan el dashboard, el tablero y el detalle del proceso. Si en
+    el mes de corte no alcanzó lo esperado (semáforo Ámbar/Rojo) el proceso
+    entra a la lista de mejora, priorizado por urgencia y con el siguiente paso
+    sugerido según lo que aún falte.
+
+    Antes se comparaba contra la meta final anual, lo que marcaba en ámbar
+    procesos que venían cumpliendo mes a mes: el dashboard los pedía mejorar
+    mientras su detalle los mostraba en verde.
     """
 
     @staticmethod
@@ -109,7 +114,7 @@ class AlertasMejoraService:
             motivos.append(f"{rojos} indicador(es) en rojo")
         if amarillos:
             motivos.append(f"{amarillos} en ámbar")
-        motivos.append(f"no alcanzó la meta a {mes_corte} (brecha promedio {brecha_prom} pp)")
+        motivos.append(f"no alcanzó lo esperado a {mes_corte} (brecha promedio {brecha_prom} pp)")
         if not mejora["tiene_algo"]:
             motivos.append("sin análisis de mejora registrado")
 
@@ -133,11 +138,10 @@ class AlertasMejoraService:
     def _avance_corte(session: Session, indicador: FichaIndicador, meses: list[str]) -> dict | None:
         """
         Desempeño en el mes de corte: último mes con dato dentro del periodo.
-        Compara el valor obtenido contra la META FINAL (no el esperado mensual)
-        y devuelve avance + semáforo + mes de corte. None si no es evaluable.
+        Compara el valor obtenido contra el ESPERADO DE ESE MES —el avance T1
+        de la directiva— y devuelve avance + semáforo + mes de corte. None si no
+        es evaluable (sin mediciones o sin resultado esperado).
         """
-        if indicador.meta_final is None:
-            return None
         unidad = indicador.unidad or ""
         mediciones = sorted(
             (m for m in session.exec(
@@ -146,18 +150,20 @@ class AlertasMejoraService:
             key=lambda m: orden_mes(m.mes),
         )
         valor = None
+        esperado = None
         mes_corte = None
         for m in reversed(mediciones):
             v = derivar_obtenido(m.numerador, m.denominador, unidad, m.resultado_obtenido)
-            if v is not None:
+            if v is not None and m.resultado_esperado is not None:
                 valor = v
+                esperado = m.resultado_esperado
                 mes_corte = m.mes
                 break
         if valor is None:
             return None
 
         es_descendente = "descendente" in (indicador.sentido or "").lower()
-        avance = ProcesoService.calcular_avance_t1(valor, indicador.meta_final, es_descendente)
+        avance = ProcesoService.calcular_avance_t1(valor, esperado, es_descendente)
         if avance is None:
             return None
         return {"avance": avance, "semaforo": calcular_semaforo(avance), "mes": mes_corte}
