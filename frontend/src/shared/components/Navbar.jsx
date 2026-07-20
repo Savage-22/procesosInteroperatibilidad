@@ -131,8 +131,11 @@ export default function Navbar() {
     const hora = formatearHora(ultimaCarga)
     const cerrar = () => setMenuAbierto(false)
 
+    // La barra queda fija al hacer scroll: las vistas de datos son largas y
+    // bajar a leer una tabla no debe costar volver arriba para cambiar de
+    // sección. `no-print` la saca de los PDF de anexos y bitácora.
     return (
-        <nav className="bg-[#1e3654] shadow-lg relative z-40">
+        <nav className="bg-[#1e3654] shadow-lg sticky top-0 z-40 no-print">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
                 {/* ── Barra principal ─────────────────────────────── */}
@@ -200,8 +203,10 @@ export default function Navbar() {
             </div>
 
             {/* ── Panel móvil ─────────────────────────────────────── */}
+            {/* Con la barra fija el panel no puede crecer más que la pantalla:
+                las 12 secciones no caben y quedarían fuera de alcance. */}
             {menuAbierto && (
-                <div className="lg:hidden bg-[#1a2f4a] border-t border-white/10 px-4 py-3 flex flex-col gap-1">
+                <div className="lg:hidden bg-[#1a2f4a] border-t border-white/10 px-4 py-3 flex flex-col gap-1 max-h-[calc(100vh-4rem)] overflow-y-auto">
 
                     <NavLinksMobile onNavigate={cerrar} />
 
